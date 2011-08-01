@@ -1,0 +1,41 @@
+=== 2011-04-14 ===
+17:22:30 [8e335a636e] *CURRENT* <h3>Faster!</h3> * CHG: profiled the code with
+         xdebug/webgrind and discovered that the metadata retrieval is the
+         slowest factor. Therefore rewrote code to fetch metadata only once
+         per displayed page. Saved a second or more on render. * CHG: no table
+         used when only one column; this avoids the TOC pushdown effect. * 
+         CHG: rewrote snippet function, clearer and more flexible. Now offers
+         3 types: inline, plain and quoted, plus extent (length) options
+         (based on new _shorten function, quite handy for future use) * CHG:
+         renamed _get_options -> _build_sorting_array (more meaningful) (user:
+         syanna tags: trunk)
+=== 2011-04-10 ===
+17:27:42 [cd47a98bf6] * NEW: underline option for each page link row (subtle,
+         but visible) * NEW: inline snippet option, up to no. of chars limit *
+         NEW: better, rounded corners on outside border (user: syanna tags:
+         trunk)
+=== 2011-04-01 ===
+09:38:21 [a9fffd0c5a] * CHG: refactoring in _render_list function: better
+         variable names; cleaner logic (user: syanna tags: trunk)
+08:44:31 [04dceffe73] * FIX: changed plugin.info.txt EOL to LF (PHP style)
+         (user: syanna tags: trunk)
+08:38:28 [26de78332e] <h4>pagequery 0.7.1</h4> * CHG: refactored the mgroup
+         function: separated the "by mixed args" option * CHG: allowed for
+         user-defined keys to be returned by mgroup function * CSS: better
+         colours/styling for "no results" message * FIX: better handling of
+         "*" search queries: always converted to .* for page name queries * 
+         FIX: added error override to search function, to ignore incorrect
+         regex patterns * CHG: refactored render function into 1)
+         _render_no_list and _render_list, plus _create_index. Easier to
+         follow logic now * CHG: better allowance for column heights (result
+         still affected line wraps on page links!); calculate a more realistic
+         column height based on estimated ratios for headers * FIX: maxns in
+         page_lookup function was incorrect ($this->maxns...) * REL: updated
+         to 0.7.1 (user: syanna tags: trunk)
+=== 2011-03-26 ===
+18:27:59 [81a136fc43] * CHG: clean up of header comments (user: syanna tags:
+         trunk)
+=== 2011-03-22 ===
+17:33:50 [8989537ef0] * FIX: fixed a whopping great big bug when list not
+         grouped! Needed to reformat result list to include name and level
+         too. (user: syanna tags: trunk)
