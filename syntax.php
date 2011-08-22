@@ -15,11 +15,10 @@ if (!defined('DOKU_PLUGIN')) define('DOKU_PLUGIN',DOKU_INC.'lib/plugins/');
 
 require_once(DOKU_PLUGIN . 'syntax.php');
 require_once(DOKU_INC . 'inc/fulltext.php');
-require_once(DOKU_PLUGIN . 'pagequery/inc/msort.php');
-
-define ('MAX_COLS', 12);
 
 class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
+
+    const MAX_COLS = 12;
 
 	function getType() {
 		return 'substition';
@@ -153,7 +152,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                     }
                     break;
                 case 'cols':
-                    $opt['cols'] = ($value > MAX_COLS) ? MAX_COLS : $value;
+                    $opt['cols'] = ($value > self::MAX_COLS) ? self::MAX_COLS : $value;
                     break;
                 case 'border':
                     switch ($value) {
@@ -232,15 +231,15 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
             }
 
             if ( ! $empty) {
-                // now do the sorting (inc/msort.php)
-                msort($sort_array, $sort_opts);
+                // now do the sorting
+                $this->msort($sort_array, $sort_opts);
                 // limit the result list length if required; this can only be done after sorting!
                 $sort_array = ($opt['limit'] > 0) ? array_slice($sort_array, 0, $opt['limit']) : $sort_array;
 
                 // and finally the grouping
                 if ($opt['group']) {
                     $keys = array('name', 'id', 'abstract');
-                    $sorted_results = mgroup($sort_array, $keys, $group_opts);
+                    $sorted_results = $this->mgroup($sort_array, $keys, $group_opts);
                 } else {
                     foreach ($sort_array as $row) {
                         $sorted_results[] = array(0, $row['name'], $row['id'], $row['abstract']);
@@ -559,7 +558,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 $meta['date']['modified'] = $meta['date']['created'];
             }
             // use page heading instead of page name
-            if ($title && isset($meta['title'])) {
+            if ($opt['title'] && isset($meta['title'])) {
                 $name = $meta['title'];
             } else {
                 $name = noNS($id);
@@ -624,7 +623,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                                 } else {
                                     $real_date = $meta['date']['modified'];
                                 }
-                                $sort_array[$row][MGROUP_REALDATE] = $real_date;
+                                $sort_array[$row][self::MGROUP_REALDATE] = $real_date;
                             }
                             // only set date formats once per sort column/key (not per id!), i.e. on first row
                             if ($row == 0) {
@@ -655,11 +654,11 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
             switch ($value) {
                 case 'a':
                 case 'asc':
-                    $dir = MSORT_ASC;
+                    $dir = self::MSORT_ASC;
                     break;
                 case 'd':
                 case 'desc':
-                    $dir = MSORT_DESC;
+                    $dir = self::MSORT_DESC;
                     break;
                 default:
                     switch ($key) {
@@ -673,10 +672,10 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                         case 'ns':
                         case 'creator':
                         case 'contributor':
-                            $dir = MSORT_ASC;
+                            $dir = self::MSORT_ASC;
                             break;
                         default:
-                            $dir = MSORT_DESC;
+                            $dir = self::MSORT_DESC;
                             break;
                     }
             }
@@ -687,15 +686,15 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
             switch ($key) {
                 case 'mdate':
                 case 'cdate':
-                    $type = MSORT_NUMERIC;
+                    $type = self::MSORT_NUMERIC;
                     break;
                 default:
                     if ($case) {
                         // case sensitive: a-z then A-Z
-                        $type = ($opt['natsort']) ? MSORT_NAT : MSORT_STRING;
+                        $type = ($opt['natsort']) ? self::MSORT_NAT : self::MSORT_STRING;
                     } else {
                         // case-insensitive
-                        $type = ($opt['natsort']) ? MSORT_NAT_CASE : MSORT_STRING_CASE;
+                        $type = ($opt['natsort']) ? self::MSORT_NAT_CASE : self::MSORT_STRING_CASE;
                     }
             }
             $sort_opts['type'][] = $type;
@@ -708,15 +707,15 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 case 'name':
                 case 'id':
                 case 'page':
-                    $group_by = MGROUP_NONE;
+                    $group_by = self::MGROUP_NONE;
                     break;
                 case 'ns':
-                    $group_by = MGROUP_NAMESPACE;
+                    $group_by = self::MGROUP_NAMESPACE;
                     break;
                 default:
-                    $group_by = MGROUP_HEADING;
+                    $group_by = self::MGROUP_HEADING;
             }
-            if ($group_by != MGROUP_NONE) {
+            if ($group_by != self::MGROUP_NONE) {
                 $group_opts['key'][$idx] = $key;
                 $group_opts['type'][$idx] = $group_by;
                 $group_opts['dformat'][$idx] = $wformat[$key];
@@ -867,6 +866,207 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
             });
         }
         return $sort_array;
+    }
+
+    /****************************
+     * SORTING HELPER FUNCTIONS *
+     ****************************
+     *
+     */
+
+    /* msort options
+     *
+     */
+
+    // keep key associations
+    const MSORT_KEEP_ASSOC = 'msort01';
+
+    // additional sorting type
+    const MSORT_NUMERIC = 'msort02';
+    const MSORT_REGULAR = 'msort03';
+    const MSORT_STRING = 'msort04';
+    const MSORT_STRING_CASE = 'msort05'; // case insensitive
+    const MSORT_NAT = 'msort06';         // natural sorting
+    const MSORT_NAT_CASE = 'msort07';    // natural sorting, case insensitive
+
+    const MSORT_ASC = 'msort08';
+    const MSORT_DESC = 'msort09';
+
+    const MSORT_DEFAULT_DIRECTION = MSORT_ASC;
+    const MSORT_DEFAULT_TYPE = MSORT_STRING;
+
+    /**
+     * A replacement for array_mulitsort which permits natural and caseless sorting
+     * This function will sort an 'array of rows' only (not array of 'columns')
+     *
+     * @param array $sort_array  : multi-dimensional array of arrays, where the first index refers to the row number
+     *                             and the second to the column number (e.g. $array[row_number][column_number])
+     *                             i.e. = array(
+     *                                          array('name1', 'job1', 'start_date1', 'rank1'),
+     *                                          array('name2', 'job2', 'start_date2', 'rank2'),
+     *                                          ...
+     *                                          );
+     *
+     * @param mixed $sort_opts   : options for how the array should be sorted
+     *                    :AS ARRAY
+     *                             $sort_opts['key'][<column>] = 'key'
+     *                             $sort_opts['type'][<column>] = 'type'
+     *                             $sort_opts['dir'][<column>] = 'dir'
+     *                             $sort_opts['assoc'][<column>] = MSORT_KEEP_ASSOC | true
+     * @return boolean
+     */
+
+    private function msort(&$sort_array, $sort_opts) {
+
+        // if a full sort_opts array was passed
+        if (is_array($sort_opts) && ! empty($sort_opts)) {
+            if (isset($sort_opts['assoc'])) {
+                $keep_assoc = true;
+            }
+        } else {
+            return false;
+        }
+
+        // Determine which u..sort function (with or without associations).
+        $sort_func = ($keep_assoc) ? 'uasort' : 'usort';
+
+        $keys = $sort_opts['key'];
+
+        // Sort the data and get the result.
+        $result = $sort_func (
+            $sort_array,
+            function(array &$left, array &$right) use(&$sort_opts, $keys) {
+
+                // Assume that the entries are the same.
+                $cmp = 0;
+
+                // Work through each sort column
+                foreach($keys as $idx => $key) {
+                    // Handle the different sort types.
+                    switch ($sort_opts['type'][$idx]) {
+                        case MSORT_NUMERIC:
+                            $key_cmp = ((intval($left[$key]) == intval($right[$key])) ? 0 :
+                                       ((intval($left[$key]) < intval($right[$key])) ? -1 : 1 ) );
+                            break;
+
+                        case MSORT_STRING:
+                            $key_cmp = strcmp((string)$left[$key], (string)$right[$key]);
+                            break;
+
+                        case MSORT_STRING_CASE: //case-insensitive
+                            $key_cmp = strcasecmp((string)$left[$key], (string)$right[$key]);
+                            break;
+
+                        case MSORT_NAT:
+                            $key_cmp = strnatcmp((string)$left[$key], (string)$right[$key]);
+                            break;
+
+                        case MSORT_NAT_CASE:    //case-insensitive
+                            $key_cmp = strnatcasecmp((string)$left[$key], (string)$right[$key]);
+                            break;
+
+                        case MSORT_REGULAR:
+                        default :
+                            $key_cmp = (($left[$key] == $right[$key]) ? 0 :
+                                       (($left[$key] < $right[$key]) ? -1 : 1 ) );
+                        break;
+                    }
+
+                    // Is the column in the two arrays the same?
+                    if ($key_cmp == 0) {
+                        continue;
+                    }
+
+                    // Are we sorting descending?
+                    $cmp = $key_cmp * (($sort_opts['dir'][$idx] == MSORT_DESC) ? -1 : 1);
+
+                    // no need for remaining keys as there was a difference
+                    break;
+                }
+                return $cmp;
+            }
+        );
+        return $result;
+    }
+
+    // grouping types
+    const MGROUP_NONE = 'mgrp00';
+    const MGROUP_HEADING = 'mgrp01';
+    const MGROUP_NAMESPACE = 'mgrp02';
+
+    // real date column
+    const MGROUP_REALDATE = '__realdate__';
+
+    /**
+     * group a multi-dimensional array by each level heading
+     * @param array $sort_array : array to be grouped (result of 'msort' function)
+     *                             __realdate__' column should contain real dates if you need dates in words
+     * @param array $keys       : which keys (columns) should be returned in results array? (as keys)
+     * @param mixed $group_opts :  AS ARRAY:
+     *                             $group_opts['key'][<order>] = column key to group by
+     *                             $group_opts['type'][<order>] = grouping type [MGROUP...]
+     *                             $group_opts['dformat'][<order>] = date formatting string
+     *
+     * @return array $results   : array of arrays: (level, display_name, page_id), e.g. array(1, 'Main Title')
+     *                              array(0, '...') =>  0 = normal row item (not heading)
+     */
+    private function mgroup(&$sort_array, $keys, $group_opts) {
+        $level = count($group_opts['key']) - 1;
+        $prevs = array();
+        $results = array();
+        $idx = 0;
+
+        if (empty($sort_array)) return array();
+
+        foreach($sort_array as $row) {
+            $this->_add_heading($results, $sort_array, $group_opts, $level, $idx, $prevs);
+            $result = array(0); // basic item (page link) is level 0
+            for ($i = 0; $i < count($keys); $i++) {
+                $result[] = $row[$keys[$i]];
+            }
+            $results[] = $result;
+            $idx++;
+        }
+        return $results;
+    }
+
+    /**
+     * private function used by mgroup only!
+     */
+    private function _add_heading(&$results, &$sort_array, &$group_opts, $level, $idx, &$prevs) {
+
+        // recurse to find all parent headings
+        if ($level > 0) {
+            $this->_add_heading($results, $sort_array, $group_opts, $level - 1, $idx, $prevs);
+        }
+        $group_type = $group_opts['type'][$level];
+
+        $prev = (isset($prevs[$level])) ? $prevs[$level] : '';
+        $key = $group_opts['key'][$level];
+        $cur = $sort_array[$idx][$key];
+        if ($cur != $prev) {
+            $prevs[$level] = $cur;
+
+            if ($group_type === self::MGROUP_HEADING) {
+                $date_format = $group_opts['dformat'][$level];
+                if ( ! empty($date_format)) {
+                    // the real date is always the the '__realdate__' column (MGROUP_REALDATE)
+                    $cur = strftime($date_format, $sort_array[$idx][self::MGROUP_REALDATE]);
+                }
+                $results[] = array($level + 1, $cur, '');
+
+            } elseif ($group_type === self::MGROUP_NAMESPACE) {
+                $cur_ns = explode(':', $cur);
+                $prev_ns = explode(':', $prev);
+                // only show namespaces that are different from the previous heading
+                for ($i= 0; $i < count($cur_ns); $i++) {
+                    if ($cur_ns[$i] != $prev_ns[$i]) {
+                        $hl = $level + $i + 1;
+                        $results[] = array($hl , $cur_ns[$i], '');
+                    }
+                }
+            }
+        }
     }
 }
 ?>

@@ -5,6 +5,7 @@ div.dokuwiki div.pagequery {
     border-width:1px;
     -moz-border-radius:8px;
     -webkit-border-radius:8px;
+    border-radius: 8px;
 }
 div.dokuwiki .notable {
     padding:6px 14px 24px !important;
@@ -55,6 +56,7 @@ div.dokuwiki div.pagequery h1 {
     background:#EDEDED;
     -moz-border-radius:6px;
     -webkit-border-radius:6px;
+    border-radius: 6px;
 }
 
 div.dokuwiki div.pagequery h1.title {
@@ -64,7 +66,7 @@ div.dokuwiki div.pagequery h1.title {
     font-size:132%;
     -moz-border-radius:0;
     -webkit-border-radius:0;
-    border-radius:0;
+    border-radius: 0;
 }
 
 div.dokuwiki div.pagequery h2 {font-size:125%; font-weight:bold;}
@@ -119,10 +121,11 @@ div.dokuwiki div.pagequery .quoted {
     font-size:80%;
 	margin:5px 15px 10px 15px !important;
 	border:1px dotted __border__ !important;
-	background:#FAFACE url(images/blockquote.gif) no-repeat 5px 5px !important;
+    background:#FAFACE url("images/blockquote.gif") no-repeat 5px 5px !important;
 	padding:10px 15px 15px 18px !important;
     -moz-border-radius:6px;
     -webkit-border-radius:6px;
+    border-radius: 6px;
 }
 div.dokuwiki div.pagequery .quoted a,
 div.dokuwiki div.pagequery .plain a {
@@ -142,5 +145,6 @@ div.dokuwiki div.pagequery p.noresults span {
     background-color:#EDEDED;
     -moz-border-radius:3px;
     -webkit-border-radius:3px;
+    border-radius: 6px;
 }
 
