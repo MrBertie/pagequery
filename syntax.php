@@ -70,7 +70,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
      *10. fullregex:only useful on page name searches; allows a raw regex mode on the full page id
      *11. nostart:  ignore any 'start' pages in namespace (based on "config:start")
      *12. maxns:    maximum namespace level to be displayed; e.g. maxns=3 => one:two:three
-     *13. title:    show 1st page heading instead of page name
+     *13. useheading:    show 1st page heading instead of page name ("title" also accepted)
      *14. snippet:  should an excerpt of the wikipage be shown:
      *              use :tooltip to show as a pop-up only
      *              use :<inline|plain|quoted>, <count>, <extent> to show 1st <count> items in list with an abstract
@@ -78,6 +78,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
      *15. natsort:  use natural sorting order (good for words beginning with numbers)
      *16. case:     respect case when sorting, i.e. a != A when sorting.  a-z then A-Z (opp. to PHP term, easier on average users)
      *17. underline:show a faint underline between each link for clarity
+     *18. label:    title/label to be added at top of the list
      *
      * All options are optional, and the list will default to a boring long 1-column list...
      */
@@ -102,7 +103,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         $opt['proper'] = 'none';
         $opt['border'] = 'none';
         $opt['snippet'] = array('type' => 'none');
-        $opt['title'] = false;
+        $opt['useheading'] = false;
         $opt['case'] = false;
         $opt['natsort'] = false;
         $opt['underline'] = false;
@@ -117,12 +118,15 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 case 'group':
                 case 'inwords':
                 case 'nostart':
-                case 'title':
                 case 'case':
                 case 'natsort':
                 case 'underline':
                 case 'nomsg':
                     $opt[$option] = true;
+                    break;
+                case 'title':   // old syntax: confusing, use standard Dokuwiki name instead
+                case 'useheading':
+                    $opt['useheading'] = true;
                     break;
                 case 'limit':
                 case 'maxns':
@@ -197,9 +201,9 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 // full text (Dokuwiki style) searching
                 $results = array_keys(ft_pageSearch($opt['query'], $highlight));
             } else {
-                // by page id only (
+                // search by page id only
                 if ($opt['fullregex']) {
-                    // allow for raw regex mode, for power users, this searches the full page id
+                    // allow for raw regex mode, for power users, this searches the full page id (incl. namespaces)
                     $pageonly = false;
                 } else {
                     list($query, $incl_ns, $excl_ns) = $this->_parse_ns_query($query);
@@ -237,13 +241,11 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 $sort_array = ($opt['limit'] > 0) ? array_slice($sort_array, 0, $opt['limit']) : $sort_array;
 
                 // and finally the grouping
+                $keys = array('name', 'id', 'abstract');
                 if ($opt['group']) {
-                    $keys = array('name', 'id', 'abstract');
                     $sorted_results = $this->mgroup($sort_array, $keys, $group_opts);
                 } else {
-                    foreach ($sort_array as $row) {
-                        $sorted_results[] = array(0, $row['name'], $row['id'], $row['abstract']);
-                    }
+                    $sorted_results = $this->mgroup($sort_array, $keys);
                 }
                 $renderer->doc .= $this->_render_list($sorted_results, $opt);
             } else {
@@ -410,6 +412,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         } else {
             $short = $this->_shorten($abstract, $opt['snippet']['extent']);   // shorten BEFORE replacing html entities!
             $short = htmlentities($short, ENT_QUOTES, 'UTF-8');
+            $abstract = str_replace("\n\n", "\n", $abstract);
             $abstract = htmlentities($abstract, ENT_QUOTES, 'UTF-8');
             $link = html_wikilink($id, $name);
             $no_snippet = ($count > 0 && $snippet_cnt >= $count);
@@ -558,7 +561,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 $meta['date']['modified'] = $meta['date']['created'];
             }
             // use page heading instead of page name
-            if ($opt['title'] && isset($meta['title'])) {
+            if ($opt['useheading'] && isset($meta['title'])) {
                 $name = $meta['title'];
             } else {
                 $name = noNS($id);
@@ -1010,22 +1013,32 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
      * @return array $results   : array of arrays: (level, display_name, page_id), e.g. array(1, 'Main Title')
      *                              array(0, '...') =>  0 = normal row item (not heading)
      */
-    private function mgroup(&$sort_array, $keys, $group_opts) {
+    private function mgroup(&$sort_array, $keys, $group_opts = array()) {
         $level = count($group_opts['key']) - 1;
         $prevs = array();
         $results = array();
         $idx = 0;
 
-        if (empty($sort_array)) return array();
-
-        foreach($sort_array as $row) {
-            $this->_add_heading($results, $sort_array, $group_opts, $level, $idx, $prevs);
-            $result = array(0); // basic item (page link) is level 0
-            for ($i = 0; $i < count($keys); $i++) {
-                $result[] = $row[$keys[$i]];
+        if (empty($sort_array)) {
+            $results =  array();
+        } elseif (empty($group_opts)) {
+            foreach ($sort_array as $row) {
+                $result = array(0);
+                foreach ($keys as $key) {
+                    $result[] = $row[$key];
+                }
+                $results[] = $result;
             }
-            $results[] = $result;
-            $idx++;
+        } else {
+            foreach($sort_array as $row) {
+                $this->_add_heading($results, $sort_array, $group_opts, $level, $idx, $prevs);
+                $result = array(0); // basic item (page link) is level 0
+                for ($i = 0; $i < count($keys); $i++) {
+                    $result[] = $row[$keys[$i]];
+                }
+                $results[] = $result;
+                $idx++;
+            }
         }
         return $results;
     }
