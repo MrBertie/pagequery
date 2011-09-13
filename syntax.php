@@ -228,7 +228,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 $sort_array = $this->_filter_meta($sort_array, $opt['filter']);
                 if (empty($sort_array)) {
                     $empty = true;
-                    $message = $this-getLang("empty_filter");
+                    $message = $this->getLang("empty_filter");
                 }
             } else {
                 $empty = true;
