@@ -124,7 +124,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 case 'nomsg':
                     $opt[$option] = true;
                     break;
-                case 'title':   // old syntax: confusing, use standard Dokuwiki name instead
+                case 'title':   // old syntax: could be confusing, use standard Dokuwiki name instead
                 case 'useheading':
                     $opt['useheading'] = true;
                     break;
@@ -241,7 +241,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 $sort_array = ($opt['limit'] > 0) ? array_slice($sort_array, 0, $opt['limit']) : $sort_array;
 
                 // and finally the grouping
-                $keys = array('name', 'id', 'abstract');
+                $keys = array('name', 'id', 'title', 'abstract');
                 if ($opt['group']) {
                     $sorted_results = $this->mgroup($sort_array, $keys, $group_opts);
                 } else {
@@ -320,19 +320,16 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
 
         // now render the pagequery list
         foreach ($sorted_results as $line) {
-            list($level, $name, $id, $abstract) = $line;
+            list($level, $name, $id, $title, $abstract) = $line;
+            $display = ($opt['useheading']) ? $title : $name;
+
             $is_heading = ($level > 0);
+            if ($is_heading) $heading = $name;
 
             // is it time to start a new column?
             if ($can_start_col === false && $col < $opt['cols'] && $cur_height >= $col_height) {
                 $can_start_col = true;
                 $col++;
-            }
-
-            // how should headings be displayed?
-            if ($is_heading) {
-                $heading = $name;
-                if ($opt['proper'] == 'header' || $opt['proper'] == 'both') $heading = $this->_proper($heading);
             }
 
             // no need for indenting if there is no grouping
@@ -363,6 +360,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 if ( ! $prev_was_heading) {
                     $render .= '</ul>' . DOKU_LF;
                 }
+                if ($opt['proper'] == 'header' || $opt['proper'] == 'both') $heading = $this->_proper($heading);
                 $render .= "<h$level$indent_style>$heading</h$level>" . DOKU_LF;
                 $prev_was_heading = true;
                 $cont_level = $level + 1;
@@ -372,7 +370,8 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                     $render .= "<ul$indent_style>";
                 }
                 // deal with normal page links
-                $link = $this->_html_wikilink($id, $name, $snippet_cnt, $abstract, $opt);
+                if ($opt['proper'] == 'name' || $opt['proper'] == 'both') $display = $this->_proper($display);
+                $link = $this->_html_wikilink($id, $display, $snippet_cnt, $abstract, $opt);
                 $snippet_cnt++;
                 $render .= $link;
                 $prev_was_heading = false;
@@ -397,7 +396,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
      * @param int   $snipet_cnt
      * @param bool  $underline
      */
-    private function _html_wikilink($id, $name, $snippet_cnt, $abstract, $opt) {
+    private function _html_wikilink($id, $display, $snippet_cnt, $abstract, $opt) {
 
         $id = (strpos($id, ':') === false) ? ':' . $id : $id;   // : needed for root pages (root level)
 
@@ -408,13 +407,13 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
 
         if ($type == 'none') {
             // Plain old wikilink
-            $link = html_wikilink($id, $name);
+            $link = html_wikilink($id, $display);
         } else {
             $short = $this->_shorten($abstract, $opt['snippet']['extent']);   // shorten BEFORE replacing html entities!
             $short = htmlentities($short, ENT_QUOTES, 'UTF-8');
             $abstract = str_replace("\n\n", "\n", $abstract);
             $abstract = htmlentities($abstract, ENT_QUOTES, 'UTF-8');
-            $link = html_wikilink($id, $name);
+            $link = html_wikilink($id, $display);
             $no_snippet = ($count > 0 && $snippet_cnt >= $count);
             if ($type == 'tooltip' || $no_snippet) {
                 $link = $this->_add_tooltip($link, $abstract);
@@ -560,15 +559,9 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
             if ( ! isset($meta['date']['modified'])) {
                 $meta['date']['modified'] = $meta['date']['created'];
             }
-            // use page heading instead of page name
-            if ($opt['useheading'] && isset($meta['title'])) {
-                $name = $meta['title'];
-            } else {
-                $name = noNS($id);
-            }
-            if ($opt['proper'] == 'name' || $opt['proper'] == 'both') {
-                $name = $this->_proper($name);
-            }
+            // establish page name (without namespace)
+            $name = noNS($id);
+
             // first column is the basic page id
             $sort_array[$row]['id'] = $id;
 
@@ -576,7 +569,10 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
             // this also avoids rebuilding the display name when building links later (DRY)
             $sort_array[$row]['name'] = $name;
 
-            // third column: cache the page abstract if needed; this saves a lot of time later
+            // third column: cache the display name; taken from metadata => 1st heading
+            $sort_array[$row]['title'] = ($opt['useheading'] && isset($meta['title'])) ? $meta['title'] : $name;
+
+            // fourth column: cache the page abstract if needed; this saves a lot of time later
             // and avoids repeated slow metadata retrievals (v. slow!)
             $sort_array[$row]['abstract'] = ($get_abstract) ? $meta['description']['abstract'] : '';
 
@@ -591,7 +587,8 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                         $value = $this->_first($name, strlen($key));
                         break;
                     case 'name':
-                        // a name column already exists by default (col 1)
+                    case 'title':
+                        // a name/title column already exists by default (col 1)
                         continue 2; // move on to the next key
                     case 'id':
                     case 'page':
@@ -672,6 +669,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                         case 'page':
                         case 'id':
                         case 'name':
+                        case 'title':
                         case 'ns':
                         case 'creator':
                         case 'contributor':
@@ -708,6 +706,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 case 'mdate':
                 case 'cdate':
                 case 'name':
+                case 'title':
                 case 'id':
                 case 'page':
                     $group_by = self::MGROUP_NONE;
@@ -1010,7 +1009,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
      *                             $group_opts['type'][<order>] = grouping type [MGROUP...]
      *                             $group_opts['dformat'][<order>] = date formatting string
      *
-     * @return array $results   : array of arrays: (level, display_name, page_id), e.g. array(1, 'Main Title')
+     * @return array $results   : array of arrays: (level, name, page_id, title), e.g. array(1, 'Main Title')
      *                              array(0, '...') =>  0 = normal row item (not heading)
      */
     private function mgroup(&$sort_array, $keys, $group_opts = array()) {
