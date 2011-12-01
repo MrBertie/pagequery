@@ -1,7 +1,8 @@
 div.dokuwiki div.pagequery {
+    overflow: hidden;
     position:relative;
     margin:0 0 1em 0;
-    padding:4px;
+    padding:3px;
     border-width:1px;
     -moz-border-radius:8px;
     -webkit-border-radius:8px;

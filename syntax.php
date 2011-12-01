@@ -934,10 +934,13 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
 
         $keys = $sort_opts['key'];
 
+        // HACK: self:: does not work inside a closure so...
+        $self = __CLASS__;
+
         // Sort the data and get the result.
         $result = $sort_func (
             $sort_array,
-            function(array &$left, array &$right) use(&$sort_opts, $keys) {
+            function(array &$left, array &$right) use(&$sort_opts, $keys, $self) {
 
                 // Assume that the entries are the same.
                 $cmp = 0;
@@ -946,28 +949,28 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 foreach($keys as $idx => $key) {
                     // Handle the different sort types.
                     switch ($sort_opts['type'][$idx]) {
-                        case MSORT_NUMERIC:
+                        case $self::MSORT_NUMERIC:
                             $key_cmp = ((intval($left[$key]) == intval($right[$key])) ? 0 :
                                        ((intval($left[$key]) < intval($right[$key])) ? -1 : 1 ) );
                             break;
 
-                        case MSORT_STRING:
+                        case $self::MSORT_STRING:
                             $key_cmp = strcmp((string)$left[$key], (string)$right[$key]);
                             break;
 
-                        case MSORT_STRING_CASE: //case-insensitive
+                        case $self::MSORT_STRING_CASE: //case-insensitive
                             $key_cmp = strcasecmp((string)$left[$key], (string)$right[$key]);
                             break;
 
-                        case MSORT_NAT:
+                        case $self::MSORT_NAT:
                             $key_cmp = strnatcmp((string)$left[$key], (string)$right[$key]);
                             break;
 
-                        case MSORT_NAT_CASE:    //case-insensitive
+                        case $self::MSORT_NAT_CASE:    //case-insensitive
                             $key_cmp = strnatcasecmp((string)$left[$key], (string)$right[$key]);
                             break;
 
-                        case MSORT_REGULAR:
+                        case $self::MSORT_REGULAR:
                         default :
                             $key_cmp = (($left[$key] == $right[$key]) ? 0 :
                                        (($left[$key] < $right[$key]) ? -1 : 1 ) );
@@ -980,7 +983,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                     }
 
                     // Are we sorting descending?
-                    $cmp = $key_cmp * (($sort_opts['dir'][$idx] == MSORT_DESC) ? -1 : 1);
+                    $cmp = $key_cmp * (($sort_opts['dir'][$idx] == $self::MSORT_DESC) ? -1 : 1);
 
                     // no need for remaining keys as there was a difference
                     break;
