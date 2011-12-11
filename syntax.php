@@ -189,6 +189,12 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
 	}
 
     function render($mode, &$renderer, $opt) {
+
+        if ( ! PHP_MAJOR_VERSION >= 5 && ! PHP_MINOR_VERSION >= 3) {
+            $renderer->doc .= "You must have PHP 5.3 or greater to use this pagequery plugin.  Please upgrade or use an older version of the plugin";
+            return false;
+        }
+
         $query = $opt['query'];
 
         $incl_ns = array();
