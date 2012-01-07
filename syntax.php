@@ -250,7 +250,6 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 } else {
                     $count = count($sort_array);
                 }
-                de&&bug($sort_array);
                 // and finally the grouping
                 $keys = array('name', 'id', 'title', 'abstract');
                 if ($opt['group']) {
