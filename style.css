@@ -1,4 +1,4 @@
-div.dokuwiki div.pagequery {
+div.dokuwiki .pagequery {
     overflow: hidden;
     position:relative;
     margin:0 0 1em 0;
@@ -11,47 +11,47 @@ div.dokuwiki div.pagequery {
 div.dokuwiki .notable {
     padding:6px 14px 24px !important;
 }
-div.dokuwiki div.pagequery table {
+div.dokuwiki .pagequery table {
     border-collapse:collapse;
     width:100%;
     margin:0;
 }
-div.dokuwiki div.pagequery,
-div.dokuwiki div.pagequery td {
+div.dokuwiki .pagequery,
+div.dokuwiki .pagequery td {
 	border-style:solid;
 	border-color:#D7D5D4;
 }
-div.dokuwiki div.pagequery td {
+div.dokuwiki .pagequery td {
 	padding:8px 10px 20px;
 	background-color:white;
     border-width:0 1px 0 0;
 }
-div.dokuwiki div.pagequery table,
-div.dokuwiki div.pagequery.noborder,
-div.dokuwiki div.pagequery td.noborder,
-div.dokuwiki div.pagequery td:nth-last-child(1),
-div.dokuwiki div.pagequery li.noborder {
+div.dokuwiki .pagequery table,
+div.dokuwiki .pagequery.noborder,
+div.dokuwiki .pagequery td.noborder,
+div.dokuwiki .pagequery td:nth-last-child(1),
+div.dokuwiki .pagequery li.noborder {
     border-width:0;
 }
 
-div.dokuwiki div.pagequery h1,
-div.dokuwiki div.pagequery h2,
-div.dokuwiki div.pagequery h3,
-div.dokuwiki div.pagequery h4,
-div.dokuwiki div.pagequery h5,
-div.dokuwiki div.pagequery h6 {
+div.dokuwiki .pagequery h1,
+div.dokuwiki .pagequery h2,
+div.dokuwiki .pagequery h3,
+div.dokuwiki .pagequery h4,
+div.dokuwiki .pagequery h5,
+div.dokuwiki .pagequery h6 {
     padding:0.06em 0 0.03em 0;
     margin:0;
     margin-bottom:2px;
     color:#A0A0A0;
 }
-div.dokuwiki div.pagequery h3,
-div.dokuwiki div.pagequery h4,
-div.dokuwiki div.pagequery h5,
-div.dokuwiki div.pagequery h6 {
+div.dokuwiki .pagequery h3,
+div.dokuwiki .pagequery h4,
+div.dokuwiki .pagequery h5,
+div.dokuwiki .pagequery h6 {
     font-weight:normal;
 }
-div.dokuwiki div.pagequery h1 {
+div.dokuwiki .pagequery h1 {
     font-size:134%;
     padding:0px 0px 3px 7px;
     background:#EDEDED;
@@ -60,7 +60,7 @@ div.dokuwiki div.pagequery h1 {
     border-radius: 6px;
 }
 
-div.dokuwiki div.pagequery h1.title {
+div.dokuwiki .pagequery h1.title {
     margin-bottom: 6px;
     border-bottom: 1px solid #D7D5D4;
     background: none;
@@ -70,55 +70,61 @@ div.dokuwiki div.pagequery h1.title {
     border-radius: 0;
 }
 
-div.dokuwiki div.pagequery h2 {font-size:125%; font-weight:bold;}
-div.dokuwiki div.pagequery h3 {font-size:114%;}
-div.dokuwiki div.pagequery h4 {font-size:108%;}
-div.dokuwiki div.pagequery h5 {font-size:100%;}
-div.dokuwiki div.pagequery h6 {font-size:95%;}
+div.dokuwiki .pagequery h2 {font-size:125%; font-weight:bold;}
+div.dokuwiki .pagequery h3 {font-size:114%;}
+div.dokuwiki .pagequery h4 {font-size:108%;}
+div.dokuwiki .pagequery h5 {font-size:100%;}
+div.dokuwiki .pagequery h6 {font-size:95%;}
 
-div.dokuwiki div.pagequery ul {
+div.dokuwiki .pagequery ul {
     list-style:none;
     margin:0 0 8px 0;
 	text-align:left;
     padding-left:8px;
 }
 
-div.dokuwiki div.pagequery li {
+div.dokuwiki .pagequery li {
     margin-left:0px !important;
 	padding-left:10px;
 	text-indent:-10px;
     line-height:135%;
     border-top:1px dotted #D7D5D4;
 }
-div.dokuwiki div.pagequery li .inline,
-div.dokuwiki div.pagequery .plain {
+div.dokuwiki .pagequery li .inline,
+div.dokuwiki .pagequery .plain {
     font-size:80%;
     font-style:italic !important;
     color:#A0A0A0;
 }
-div.dokuwiki div.pagequery li .inline {
+div.dokuwiki .pagequery li .inline {
     margin-left:0.7em;
 }
-div.dokuwiki div.pagequery .plain {
+div.dokuwiki .pagequery .plain {
     margin:0.1em 0.5em 0.2em;
     padding:5px;
 }
-div.dokuwiki div.pagequery li:nth-child(1) {
+div.dokuwiki .pagequery li:nth-child(1) {
     border:0;
 }
-div.dokuwiki div.pagequery a:hover {
+div.dokuwiki .pagequery a:hover {
     text-decoration:none;
     color:#202020 !important;
 }
-div.dokuwiki div.pagequery a.top {
+div.dokuwiki .pagequery a.top,
+div.dokuwiki .pagequery .count {
     position:absolute;
     bottom:0.4em;
-    right:0.5em;
     font-style:italic;
     color:#A0A0A0;
 }
+div.dokuwiki .pagequery a.top {
+    right:0.5em;
+}
+div.dokuwiki .pagequery .count {
+    left: 0.5em;
+}
 /* credit: blockquote:plugin */
-div.dokuwiki div.pagequery .quoted {
+div.dokuwiki .pagequery .quoted {
     font-size:80%;
 	margin:5px 15px 10px 15px !important;
 	border:1px dotted __border__ !important;
@@ -128,16 +134,16 @@ div.dokuwiki div.pagequery .quoted {
     -webkit-border-radius:6px;
     border-radius: 6px;
 }
-div.dokuwiki div.pagequery .quoted a,
-div.dokuwiki div.pagequery .plain a {
+div.dokuwiki .pagequery .quoted a,
+div.dokuwiki .pagequery .plain a {
     margin-left:0.5em;
 }
-div.dokuwiki div.pagequery p.noresults {
+div.dokuwiki .pagequery p.noresults {
     color:#899BB2 !important;
     font-size:1.2em;
     margin-left:1.2em;
 }
-div.dokuwiki div.pagequery p.noresults span {
+div.dokuwiki .pagequery p.noresults span {
     font-size:0.8em;
     line-height:1.2em;
     font-style:italic;

@@ -244,8 +244,13 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 // now do the sorting
                 $this->msort($sort_array, $sort_opts);
                 // limit the result list length if required; this can only be done after sorting!
-                $sort_array = ($opt['limit'] > 0) ? array_slice($sort_array, 0, $opt['limit']) : $sort_array;
-
+                if ($opt['limit'] > 0) {
+                    $count = $opt['limit'];
+                    $sort_array = array_slice($sort_array, 0, $count);
+                } else {
+                    $count = count($sort_array);
+                }
+                de&&bug($sort_array);
                 // and finally the grouping
                 $keys = array('name', 'id', 'title', 'abstract');
                 if ($opt['group']) {
@@ -253,7 +258,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 } else {
                     $sorted_results = $this->mgroup($sort_array, $keys);
                 }
-                $renderer->doc .= $this->_render_list($sorted_results, $opt);
+                $renderer->doc .= $this->_render_list($sorted_results, $opt, $count);
             } else {
                 if ( ! $opt['nomsg']) {
                     $renderer->doc .= $this->_render_no_list($query, $message);
@@ -300,7 +305,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
      * @param string $border
      * @return string => HTML rendered list
      */
-    private function _render_list($sorted_results, $opt) {
+    private function _render_list($sorted_results, $opt, $count) {
         $ratios = array(.80, 1.3, 1.17, 1.1, 1.03, .96, .90);   // height ratios: link, h1, h2, h3, h4, h5, h6
         $render = '';
         $prev_was_heading = false;
@@ -319,6 +324,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         $no_table = ( ! $multi_col) ? ' notable' : '';
         $top_id = 'top-' . mt_rand();   // fixed anchor point to jump back to at top of the table
         $render .= '<div class="pagequery' . $outer_border . $no_table . '" id="' . $top_id . '">' . DOKU_LF;
+        $render .= '<div class="count">' . $count . '</div>' . DOKU_LF;
         if ($opt['label'] != '') $render .= '<h1 class="title">' . $opt['label'] . '</h1>' . DOKU_LF;
         if ($multi_col) $render .= '<table><tbody><tr>' . DOKU_LF;
 
@@ -554,6 +560,12 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
 
         $row = 0;
 
+        // look for abc by title instead of name
+        if (isset($opt['sort']['title'])) {
+            $from_title = true;
+        } else {
+            $from_title = false;
+        }
         // any extra columns needed for filtering are added also!
         $extrakeys = array_diff_key($opt['filter'], $opt['sort']);
         $col_keys = array_merge($opt['sort'], $extrakeys);
@@ -576,7 +588,8 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
             $sort_array[$row]['name'] = $name;
 
             // third column: cache the display name; taken from metadata => 1st heading
-            $sort_array[$row]['title'] = ($opt['useheading'] && isset($meta['title'])) ? $meta['title'] : $name;
+            $title = (isset($meta['title']) && ! empty($meta['title'])) ? $meta['title'] : $name;
+            $sort_array[$row]['title'] = $title;
 
             // fourth column: cache the page abstract if needed; this saves a lot of time later
             // and avoids repeated slow metadata retrievals (v. slow!)
@@ -590,11 +603,12 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                     case 'a':
                     case 'ab':
                     case 'abc':
-                        $value = $this->_first($name, strlen($key));
+                        $abc = ($from_title) ? $title : $name;
+                        $value = $this->_first(strtolower($abc), strlen($key));
                         break;
                     case 'name':
                     case 'title':
-                        // a name/title column already exists by default (col 1)
+                        // a name/title column already exists by default (col 1,2)
                         continue 2; // move on to the next key
                     case 'id':
                     case 'page':
@@ -850,7 +864,8 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
     private function _filter_ns($pages, $ns_qry, $exclude) {
         $invert = ($exclude) ? PREG_GREP_INVERT : 0;
         foreach ($ns_qry as $ns) {
-            $regexes[] = '.*' . $ns . ':.*';
+            //  we only look for namespace from beginning of the id
+            $regexes[] = '^' . $ns . ':.*';
         }
         if ( ! empty($regexes)) {
             $regex = '/(' . implode('|', $regexes) . ')/';
