@@ -560,11 +560,9 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         $row = 0;
 
         // look for abc by title instead of name
-        if (isset($opt['sort']['title'])) {
-            $from_title = true;
-        } else {
-            $from_title = false;
-        }
+        // title take precedence over name (should you try to sort by both...why?)
+        $from_title = (isset($opt['sort']['title'])) ? true : false;
+
         // any extra columns needed for filtering are added also!
         $extrakeys = array_diff_key($opt['filter'], $opt['sort']);
         $col_keys = array_merge($opt['sort'], $extrakeys);
@@ -607,7 +605,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                         break;
                     case 'name':
                     case 'title':
-                        // a name/title column already exists by default (col 1,2)
+                        // name/title columns already exists by default (col 1,2)
                         continue 2; // move on to the next key
                     case 'id':
                     case 'page':
