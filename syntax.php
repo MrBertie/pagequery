@@ -881,8 +881,15 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
      */
     private function _filter_meta($sort_array, $filter) {
         foreach ($filter as $metakey => $expr) {
-            $sort_array = array_filter($sort_array, function($row) use ($metakey, $expr) {
-                return preg_match('`' . $expr . '`', $row[$metakey]) > 0;
+            // allow for exclusion matches (put ^ or ! in front of meta key)
+            $exclude = false;
+            if ($metakey[0] == '^' || $metakey[0] == '!') {
+                $exclude = true;
+                $metakey = substr($metakey, 1);
+            }
+            $sort_array = array_filter($sort_array, function($row) use ($metakey, $expr, $exclude) {
+                $match = preg_match('`' . $expr . '`', $row[$metakey]);
+                return ($exclude) ? $match == 0 : $match > 0;
             });
         }
         return $sort_array;
