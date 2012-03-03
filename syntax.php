@@ -50,18 +50,20 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
      * 3. sort:     keys to sort by, in order of sorting. Each key can be followed by prefered sorting order
      *              available keys:
      *                  a, ab, abc          by 1st letter, 2 letters, or 3 letters
-     *                  name                by page name (no namespace) or 1st heading [not grouped]
-     *                  page|id             by full page id, including namespace [not grouped]
+     *                  name                by page name (no namespace) [not grouped]
+     *                  title               by 1st heading/title [not grouped]
+     *                  id                  by full page id, including namespace [not grouped]
      *                  ns                  by namespace (without page name)
      *                  mdate, cdate        by modified|created dates (full) [not grouped]
      *                  m[year][month][day] by modified [year][month][day]; any combination accepted
      *                  c[year][month][day] by created [year][month][day]; any combination accepted
      *                  creator             by page author
+     *                  contrib             by page contributor
      *              date sort default to descending, string sorts to ascending
      * 4. group:    show group headers for each change in sort keys
      *              Note: keys with no duplicate cannot be grouped (i.e. name, page|id, mdate, cdate)
      * 5. limit:    maximum number of results to return
-     * 6. inwords:  use real month and day names instead of numeric dates
+     * 6. spelldate:  use real month and day names instead of numeric dates (was 'inwords' [deprecated])
      * 7. cols:     number of columns in displayed list (max = 6)
      * 8. proper:   display page names and namespace in Proper Case (i.e. no _'s and Capitalised)
      *              header/hdr = group headers only, name = page name only, both = both!
@@ -70,15 +72,17 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
      *10. fullregex:only useful on page name searches; allows a raw regex mode on the full page id
      *11. nostart:  ignore any 'start' pages in namespace (based on "config:start")
      *12. maxns:    maximum namespace level to be displayed; e.g. maxns=3 => one:two:three
-     *13. useheading:    show 1st page heading instead of page name ("title" also accepted)
-     *14. snippet:  should an excerpt of the wikipage be shown:
+     *13. useheading:    show 1st page heading instead of page name ("title" also accepted)  [deprecated]
+     *14. display:  display format for page links: name, title or id
+     *15. snippet:  should an excerpt of the wikipage be shown:
      *              use :tooltip to show as a pop-up only
      *              use :<inline|plain|quoted>, <count>, <extent> to show 1st <count> items in list with an abstract
      *                  extent always choice of chars, words, lines, or find (c? w? l? ~????)
-     *15. natsort:  use natural sorting order (good for words beginning with numbers)
-     *16. case:     respect case when sorting, i.e. a != A when sorting.  a-z then A-Z (opp. to PHP term, easier on average users)
-     *17. underline:show a faint underline between each link for clarity
-     *18. label:    title/label to be added at top of the list
+     *16. natsort:  use natural sorting order (good for words beginning with numbers)
+     *17. case:     respect case when sorting, i.e. a != A when sorting.  a-z then A-Z (opp. to PHP term, easier on average users)
+     *18. underline:show a faint underline between each link for clarity
+     *19. label:    title/label to be added at top of the list
+     *20. nomsg:    no empty results message
      *
      * All options are optional, and the list will default to a boring long 1-column list...
      */
@@ -99,11 +103,13 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         $opt['limit'] = 0;
         $opt['maxns'] = 0;
         $opt['nostart'] = false;
+        $opt['spelldate'] = false;
         $opt['cols'] = 1;
         $opt['proper'] = 'none';
         $opt['border'] = 'none';
         $opt['snippet'] = array('type' => 'none');
         $opt['useheading'] = false;
+        $opt['display'] = 'name';
         $opt['case'] = false;
         $opt['natsort'] = false;
         $opt['underline'] = false;
@@ -116,7 +122,6 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 case 'fulltext':
 				case 'fullregex':
                 case 'group':
-                case 'inwords':
                 case 'nostart':
                 case 'case':
                 case 'natsort':
@@ -124,8 +129,12 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 case 'nomsg':
                     $opt[$option] = true;
                     break;
-                case 'title':   // old syntax: could be confusing, use standard Dokuwiki name instead
-                case 'useheading':
+                case 'spelldate':
+                case 'inwords':  //[deprecated]
+                    $opt['spelldate'] = true;
+                    break;
+                case 'title':   // [deprecated]
+                case 'useheading':  // [deprecated also]
                     $opt['useheading'] = true;
                     break;
                 case 'limit':
@@ -137,6 +146,21 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                     $fields = explode(',', $value);
                     foreach ($fields as $field) {
                         list($key, $expr) = explode(':', $field);
+                        // allow for a few common naming differences
+                        switch ($key) {
+                            case 'pagename':
+                                $key = 'name';
+                                break;
+                            case 'heading':
+                            case 'firstheading':
+                                $key = 'title';
+                                break;
+                            case 'pageid':
+                            case 'id':
+                            case 'page':  //deprecated!
+                                $key = 'id';
+                                break;
+                        }
                         $opt[$option][$key] = $expr;
                     }
                     break;
@@ -182,6 +206,24 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                     break;
                 case 'label':
                     $opt['label'] = $value;
+                    break;
+                case 'display':
+                    switch ($value) {
+                        case 'name':
+                            $opt['display'] = 'name';
+                            break;
+                        case 'title':
+                        case 'heading':
+                        case 'firstheading':
+                            $opt['display'] = 'title';
+                            break;
+                        case 'pageid':
+                        case 'id':
+                            $opt['display'] = 'id';
+                            break;
+                        default:
+                            $opt['display'] = 'name';
+                    }
                     break;
             }
         }
@@ -271,6 +313,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
 
     private function _adjusted_height($sorted_results, $ratios) {
         // ratio of different heading heights (%), to ensure more even use of columns (h1 -> h6)
+        $adjusted_height = 0;
         foreach ($sorted_results as $row) {
             $adjusted_height += $ratios[$row[0]];
         }
@@ -298,10 +341,9 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
      * Render the final pagequery results list as HTML, indented and in columns as required
      *
      * @param array  $sorted_results
-     * @param int    $cols
-     * @param bool   $proper
-     * @param string $snippet
-     * @param string $border
+     * @param array  $opt
+     * @param int    $count => count of results
+     *
      * @return string => HTML rendered list
      */
     private function _render_list($sorted_results, $opt, $count) {
@@ -332,7 +374,22 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         // now render the pagequery list
         foreach ($sorted_results as $line) {
             list($level, $name, $id, $title, $abstract) = $line;
-            $display = ($opt['useheading']) ? $title : $name;
+            // 'useheading' is now deprecated, but will remain in use for a while
+            if ($opt['useheading'] !== false) {
+                $display = $title;
+            } else {
+                switch ($opt['display']) {
+                    case 'name':
+                        $display = $name;
+                        break;
+                    case 'title':
+                        $display = $title;
+                        break;
+                    case 'id':
+                        $display = $id;
+                        break;
+                }
+            }
 
             $is_heading = ($level > 0);
             if ($is_heading) $heading = $name;
@@ -535,13 +592,9 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
     /**
      * Builds the sorting array: array of arrays (0 = id, 1 = name, 2 = abstract, 3 = ... , etc)
      *
-     * @param array     $ids        array of page ids to be sorted
-     * @param array     $sortkeys   list of array keys to sort by
-     * @param bool      $title      use page heading instead of name for sorting
-     * @param bool      $proper     use proper case where possible
-     * @param bool      $inwords    show dates in words where possible
-     * @param bool      $case       honour case when sorting
-     * @param bool      $natsort    natural sorting, the human way
+     * @param array     $ids            array of page ids to be sorted
+     * @param array     $get_abstract   use page abstract
+     * @param bool      $opt            all user options/settings
      *
      * @return array    $sort_array array of array(one value for each key to be sorted)
      *                   $sort_opts  sorting options for the msort function
@@ -550,6 +603,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
     private function _build_sorting_array($ids, $get_abstract, $opt) {
         global $conf;
 
+        $sort_array = array();
         $sort_opts = array();
         $group_opts = array();
 
@@ -559,11 +613,11 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
 
         $row = 0;
 
-        // look for abc by title instead of name
-        // title take precedence over name (should you try to sort by both...why?)
+        // look for 'abc' by title instead of name ('abc' by pageid makes little sense)
+        // title takes precedence over name (should you try to sort by both...why?)
         $from_title = (isset($opt['sort']['title'])) ? true : false;
 
-        // any extra columns needed for filtering are added also!
+        // add any extra columns needed for filtering!
         $extrakeys = array_diff_key($opt['filter'], $opt['sort']);
         $col_keys = array_merge($opt['sort'], $extrakeys);
 
@@ -585,6 +639,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
             $sort_array[$row]['name'] = $name;
 
             // third column: cache the display name; taken from metadata => 1st heading
+            // used when sorting by 'title'
             $title = (isset($meta['title']) && ! empty($meta['title'])) ? $meta['title'] : $name;
             $sort_array[$row]['title'] = $title;
 
@@ -595,7 +650,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
             // cache of full date for this row
             $real_date = 0;
 
-            foreach ($col_keys as $key => $_void) {
+            foreach ($col_keys as $key => $void) {
                 switch ($key) {
                     case 'a':
                     case 'ab':
@@ -606,9 +661,9 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                     case 'name':
                     case 'title':
                         // name/title columns already exists by default (col 1,2)
-                        continue 2; // move on to the next key
+                        // save a few microseconds by just moving on to the next key
+                        continue 2;
                     case 'id':
-                    case 'page':
                         $value = $id;
                         break;
                     case 'ns':
@@ -646,7 +701,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                             if ($row == 0) {
                                 $dformat[$key] = $this->_date_format($key);
                                 // collect date in word format for potential use in grouping
-                                if ($opt['inwords']) {
+                                if ($opt['spelldate']) {
                                     $wformat[$key] = $this->_date_format_words($dformat[$key]);
                                 } else {
                                     $wformat[$key] = '';
@@ -683,10 +738,9 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                         case 'a':
                         case 'ab':
                         case 'abc':
-                        case 'page':
-                        case 'id':
                         case 'name':
                         case 'title':
+                        case 'id':
                         case 'ns':
                         case 'creator':
                         case 'contributor':
@@ -700,7 +754,6 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
             $sort_opts['dir'][] = $dir;
 
             // set the sort array's data type
-            $is_ns = false;
             switch ($key) {
                 case 'mdate':
                 case 'cdate':
@@ -725,7 +778,6 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 case 'name':
                 case 'title':
                 case 'id':
-                case 'page':
                     $group_by = self::MGROUP_NONE;
                     break;
                 case 'ns':
