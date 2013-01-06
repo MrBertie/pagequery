@@ -36,6 +36,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
 		$this->Lexer->addSpecialPattern('\{\{pagequery>.*?\}\}', $mode, 'plugin_pagequery');
 	}
 
+
     /**
      * Parses all the pagequery options:
      * Insert the pagequery markup wherever you want your list to appear. E.g:
@@ -102,19 +103,21 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         $opt['group'] = false;
         $opt['limit'] = 0;
         $opt['maxns'] = 0;
-        $opt['nostart'] = false;
+        $opt['hidestart'] = false;
         $opt['spelldate'] = false;
         $opt['cols'] = 1;
         $opt['proper'] = 'none';
         $opt['border'] = 'none';
         $opt['snippet'] = array('type' => 'none');
-        $opt['useheading'] = false;
         $opt['display'] = 'name';
-        $opt['case'] = false;
+        $opt['casesort'] = false;
         $opt['natsort'] = false;
         $opt['underline'] = false;
-        $opt['nomsg'] = false;
+        $opt['hidemsg'] = false;
         $opt['label'] = '';
+        $opt['showcount'] = false;
+        $opt['hidejump'] = false;
+        $opt['dformat'] = "%d %b %Y";
 
         foreach ($params as $param) {
             list($option, $value) = explode('=', $param);
@@ -122,20 +125,17 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 case 'fulltext':
 				case 'fullregex':
                 case 'group':
-                case 'nostart':
-                case 'case':
+                case 'hidestart':
+                case 'casesort':
                 case 'natsort':
                 case 'underline':
-                case 'nomsg':
+                case 'hidemsg':
+                case 'hidejump':
+                case 'showcount':
                     $opt[$option] = true;
                     break;
                 case 'spelldate':
-                case 'inwords':  //[deprecated]
                     $opt['spelldate'] = true;
-                    break;
-                case 'title':   // [deprecated]
-                case 'useheading':  // [deprecated also]
-                    $opt['useheading'] = true;
                     break;
                 case 'limit':
                 case 'maxns':
@@ -157,8 +157,10 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                                 break;
                             case 'pageid':
                             case 'id':
-                            case 'page':  //deprecated!
                                 $key = 'id';
+                                break;
+                            case 'contrib':
+                                $key = 'contributor';
                                 break;
                         }
                         $opt[$option][$key] = $expr;
@@ -194,7 +196,6 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                             $opt['border'] = 'both';
                     }
                     break;
-                case 'abstract':    // old syntax, to be deprecated (2011-03-15)
                 case 'snippet':
                     $options = explode(',', $value);
                     $type = ( ! empty($options[0])) ? $options[0] : 'tooltip';
@@ -220,15 +221,15 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                         case 'pageid':
                         case 'id':
                             $opt['display'] = 'id';
-                            break;
                         default:
-                            $opt['display'] = 'name';
+                            $opt['display'] = $value;
                     }
                     break;
             }
         }
 		return $opt;
 	}
+
 
     function render($mode, &$renderer, $opt) {
 
@@ -259,7 +260,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 }
 
                 if ($query == '*') $query = '.*';   // a lazy man's option!
-                $results = $this->_page_lookup($query, $pageonly, $incl_ns, $excl_ns, $opt['nostart'], $opt['maxns']);
+                $results = $this->_page_lookup($query, $pageonly, $incl_ns, $excl_ns, $opt['hidestart'], $opt['maxns']);
             }
 
             if ($results === false) {
@@ -293,7 +294,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                     $count = count($sort_array);
                 }
                 // and finally the grouping
-                $keys = array('name', 'id', 'title', 'abstract');
+                $keys = array('name', 'id', 'title', 'abstract', 'display');
                 if ($opt['group']) {
                     $sorted_results = $this->mgroup($sort_array, $keys, $group_opts);
                 } else {
@@ -301,7 +302,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 }
                 $renderer->doc .= $this->_render_list($sorted_results, $opt, $count);
             } else {
-                if ( ! $opt['nomsg']) {
+                if ( ! $opt['hidemsg']) {
                     $renderer->doc .= $this->_render_no_list($query, $message);
                 }
             }
@@ -311,6 +312,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         }
     }
 
+
     private function _adjusted_height($sorted_results, $ratios) {
         // ratio of different heading heights (%), to ensure more even use of columns (h1 -> h6)
         $adjusted_height = 0;
@@ -319,6 +321,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         }
         return $adjusted_height;
     }
+
 
     /**
      * Render a simple "no results" message
@@ -336,6 +339,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         $render .= '</div>' . DOKU_LF;
         return $render;
     }
+
 
     /**
      * Render the final pagequery results list as HTML, indented and in columns as required
@@ -365,7 +369,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         $no_table = ( ! $multi_col) ? ' notable' : '';
         $top_id = 'top-' . mt_rand();   // fixed anchor point to jump back to at top of the table
         $render .= '<div class="pagequery' . $outer_border . $no_table . '" id="' . $top_id . '">' . DOKU_LF;
-        $render .= '<div class="count">' . $count . '</div>' . DOKU_LF;
+        if ($opt['showcount'] == true) $render .= '<div class="count">' . $count . '</div>' . DOKU_LF;
         if ($opt['label'] != '') $render .= '<h1 class="title">' . $opt['label'] . '</h1>' . DOKU_LF;
         if ($multi_col) $render .= '<table><tbody><tr>' . DOKU_LF;
 
@@ -373,23 +377,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
 
         // now render the pagequery list
         foreach ($sorted_results as $line) {
-            list($level, $name, $id, $title, $abstract) = $line;
-            // 'useheading' is now deprecated, but will remain in use for a while
-            if ($opt['useheading'] !== false) {
-                $display = $title;
-            } else {
-                switch ($opt['display']) {
-                    case 'name':
-                        $display = $name;
-                        break;
-                    case 'title':
-                        $display = $title;
-                        break;
-                    case 'id':
-                        $display = $id;
-                        break;
-                }
-            }
+            list($level, $name, $id, $title, $abstract, $display) = $line;
 
             $is_heading = ($level > 0);
             if ($is_heading) $heading = $name;
@@ -419,7 +407,8 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 $td = ($multi_col) ? '<td' . $inner_border . ' valign="top" width="' . $width . '%">' : '';
                 $render .= $col_close . $td . $col_open . DOKU_LF;
                 $can_start_col = false;
-                $prev_was_heading = true;    // needed to correctly style page link lists <ul>...
+                // needed to correctly style page link lists <ul>...
+                $prev_was_heading = true;
                 $cur_height = 0;
             }
             // finally display the appropriate heading or page link(s)
@@ -429,6 +418,9 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                     $render .= '</ul>' . DOKU_LF;
                 }
                 if ($opt['proper'] == 'header' || $opt['proper'] == 'both') $heading = $this->_proper($heading);
+                if ( ! empty($id)) {
+                    $heading = $this->_html_wikilink($id, $heading, 0, '', $opt, true);
+                }
                 $render .= "<h$level$indent_style>$heading</h$level>" . DOKU_LF;
                 $prev_was_heading = true;
                 $cont_level = $level + 1;
@@ -449,22 +441,23 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         }
         $render .= '</ul>' . DOKU_LF;
         if ($multi_col) $render .= '</td></tr></tbody></table>' . DOKU_LF;
-        $render .= '<a class="top" href="#' . $top_id . '">' . $this->getLang('link_to_top') . '</a>' . DOKU_LF;
+        if ($opt['hidejump'] == false) $render .= '<a class="top" href="#' . $top_id . '">' . $this->getLang('link_to_top') . '</a>' . DOKU_LF;
         $render .= '</div>' . DOKU_LF;
 
         return $render;
     }
 
+
     /**
      * Renders the page link, plus tooltip, abstract, casing, etc...
      * @param string $id
-     * @param bool  $proper
-     * @param bool  $title
-     * @param mixed $snippet
-     * @param int   $snipet_cnt
-     * @param bool  $underline
+     * @param bool  $display
+     * @param int   $snippet_cnt
+     * @param string $abstract
+     * @param bool  $opt
+     * @param bool  $raw => unformatted (no html)
      */
-    private function _html_wikilink($id, $display, $snippet_cnt, $abstract, $opt) {
+    private function _html_wikilink($id, $display, $snippet_cnt, $abstract, $opt, $raw = false) {
 
         $id = (strpos($id, ':') === false) ? ':' . $id : $id;   // : needed for root pages (root level)
 
@@ -496,8 +489,14 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
             }
         }
         $noborder = ($opt['underline']) ? '' : ' class="noborder"';
-        return "<li$noborder>" . $link . $inline . '</li>' . DOKU_LF . $after;
+        if ($raw) {
+            $wikilink = $link . $inline;
+        } else {
+            $wikilink = "<li$noborder>" . $link . $inline . '</li>' . DOKU_LF . $after;
+        }
+        return $wikilink;
     }
+
 
     /**
      * Swap normal link title (popup) for a more useful preview
@@ -511,6 +510,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         $link = preg_replace('/title=\".+?\"/', 'title="' . $tooltip . '"', $link, 1);
         return $link;
     }
+
 
     /**
      * return the first part of the $text according to the $amount given
@@ -545,6 +545,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         return $result;
     }
 
+
     /**
      * Changes a wiki page id into proper case (allowing for :'s etc...)
      * @param string    $id    page id
@@ -557,6 +558,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
          $id = str_replace(': ', ':', $id);
          return $id;
     }
+
 
     /**
      * Parse out the namespace, and convert to a regex for array search
@@ -588,6 +590,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         $page_qry = trim($page_qry);
         return array($page_qry, $incl_ns, $excl_ns);
     }
+
 
     /**
      * Builds the sorting array: array of arrays (0 = id, 1 = name, 2 = abstract, 3 = ... , etc)
@@ -645,7 +648,11 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
 
             // fourth column: cache the page abstract if needed; this saves a lot of time later
             // and avoids repeated slow metadata retrievals (v. slow!)
-            $sort_array[$row]['abstract'] = ($get_abstract) ? $meta['description']['abstract'] : '';
+            $abstract = ($get_abstract) ? $meta['description']['abstract'] : '';
+            $sort_array[$row]['abstract'] = $abstract;
+
+            // fifth column is the displayed text for links; set below
+            $sort_array[$row]['display'] = '';
 
             // cache of full date for this row
             $real_date = 0;
@@ -714,6 +721,42 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 }
                 $sort_array[$row][$key] = $value;
             }
+
+            // allow for custom display formatting
+            $key = '';
+            $matches = array();
+            $display = $opt['display'];
+            $matched = preg_match_all('/\{(.+?)\}/', $display, $matches, PREG_SET_ORDER);
+            if ($matched > 0) {
+                foreach ($matches as $match) {
+                    $key = $match[1];
+                    $value = null;
+                    if (isset($sort_array[$row][$key])) {
+                        $value = $sort_array[$row][$key];
+                    } elseif (isset($meta[$key])) {
+                        $value = $meta[$key];
+                    } elseif (strpos($key, '|') !== false) {
+                        $keys = explode('|', $key);
+                        if (isset($meta[$keys[0]][$keys[1]])) {
+                            $value = $meta[$keys[0]][$keys[1]];
+                        }
+                    } elseif ($key == 'mdate') {
+                        $value = $meta['date']['modified'];
+                    } elseif ($key == 'cdate') {
+                        $value = $meta['date']['created'];
+                    }
+                    if ( ! is_null($value)) {
+                        if (strpos($key, 'date') !== false) {
+                            $value = strftime($opt['dformat'], $value);
+                        }
+                        $display = str_replace($match[0], $value, $display);
+                    }
+                }
+            } elseif (isset($sort_array[$row][$display])) {
+                $display = $sort_array[$row][$display];
+            }
+            $sort_array[$row]['display'] = $display;
+
             $row++;
         }
 
@@ -760,7 +803,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                     $type = self::MSORT_NUMERIC;
                     break;
                 default:
-                    if ($case) {
+                    if ($opt['casesort']) {
                         // case sensitive: a-z then A-Z
                         $type = ($opt['natsort']) ? self::MSORT_NAT : self::MSORT_STRING;
                     } else {
@@ -796,12 +839,14 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         return array($sort_array, $sort_opts, $group_opts);
     }
 
+
     // returns first $count letters from $text
     private function _first($text, $count) {
         if ($count > 0) {
             return utf8_substr($text, 0, $count);
         }
     }
+
 
     /**
      * Parse the c|m-year-month-day option; used for sorting/grouping
@@ -816,6 +861,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         $dformat = implode('-', $dkey);
         return $dformat;
     }
+
 
     /**
      * Provide month and day format in real words if required
@@ -845,6 +891,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         }
         return $wformat;
     }
+
 
     /**
      * A heavily customised version of _ft_pageLookup in inc/fulltext.php
@@ -903,6 +950,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         return $pages;
     }
 
+
     /**
      * Include/Exclude specific namespaces from a list of pages
      * @param type $pages   a list of wiki page ids
@@ -925,6 +973,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         return $result;
     }
 
+
     /**
      * filter array of pages by specific meta data keys (or columns)
      *
@@ -939,13 +988,39 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 $exclude = true;
                 $metakey = substr($metakey, 1);
             }
-            $sort_array = array_filter($sort_array, function($row) use ($metakey, $expr, $exclude) {
-                $match = preg_match('`' . $expr . '`', $row[$metakey]);
-                return ($exclude) ? $match == 0 : $match > 0;
+            $that = $this;
+            $sort_array = array_filter($sort_array, function($row) use ($metakey, $expr, $exclude, $that) {
+                if ( ! isset($row[$metakey])) return false;
+                if (strpos($metakey, 'date') !== false) {
+                    $match = $that->_filter_by_date($expr, $row[$metakey]);
+                } else {
+                    $match = preg_match('`' . $expr . '`', $row[$metakey]) > 0;
+                }
+                if ($exclude) $match = ! $match;
+                return $match;
             });
         }
         return $sort_array;
     }
+
+
+    function _filter_by_date($filter, $date) {
+        $filter = str_replace('/', '.', $filter);  // allow for Euro style date formats
+        $filters = explode('->', $filter);
+        $begin = (empty($filters[0]) ? null : strtotime($filters[0]));
+        $end   = (empty($filters[1]) ? null : strtotime($filters[1]));
+
+        $matched = false;
+        if ($begin !== null && $end !== null) {
+            $matched = ($date >= $begin && $date <= $end);
+        } elseif ($begin !== null) {
+            $matched = ($date >= $begin);
+        } elseif ($end !== null) {
+            $matched = ($date <= $end);
+        }
+        return $matched;
+    }
+
 
     /****************************
      * SORTING HELPER FUNCTIONS *
@@ -1126,6 +1201,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
      * private function used by mgroup only!
      */
     private function _add_heading(&$results, &$sort_array, &$group_opts, $level, $idx, &$prevs) {
+        global $conf;
 
         // recurse to find all parent headings
         if ($level > 0) {
@@ -1151,10 +1227,12 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 $cur_ns = explode(':', $cur);
                 $prev_ns = explode(':', $prev);
                 // only show namespaces that are different from the previous heading
-                for ($i= 0; $i < count($cur_ns); $i++) {
+                for ($i = 0; $i < count($cur_ns); $i++) {
                     if ($cur_ns[$i] != $prev_ns[$i]) {
                         $hl = $level + $i + 1;
-                        $results[] = array($hl , $cur_ns[$i], '');
+                        $id = implode(':', array_slice($cur_ns, 0, $i + 1)) . ':' . $conf['start'];
+                        $ns_start = (page_exists($id)) ? $id : '';
+                        $results[] = array($hl , $cur_ns[$i], $ns_start, '', '');
                     }
                 }
             }
