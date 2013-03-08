@@ -45,47 +45,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
      *
      *   {{pagequery>[query];fulltext;sort=key:direction,key2:direction;group;limit=??;cols=?;inwords;proper}}
      *
-     * Parameters as follows:
-     * 1. query:    any expression directly after the >; can use all Dokuwiki search options (see manual)
-     * 2. fulltext: use a full-text search, instead of page_id only [default]
-     * 3. sort:     keys to sort by, in order of sorting. Each key can be followed by prefered sorting order
-     *              available keys:
-     *                  a, ab, abc          by 1st letter, 2 letters, or 3 letters
-     *                  name                by page name (no namespace) [not grouped]
-     *                  title               by 1st heading/title [not grouped]
-     *                  id                  by full page id, including namespace [not grouped]
-     *                  ns                  by namespace (without page name)
-     *                  mdate, cdate        by modified|created dates (full) [not grouped]
-     *                  m[year][month][day] by modified [year][month][day]; any combination accepted
-     *                  c[year][month][day] by created [year][month][day]; any combination accepted
-     *                  creator             by page author
-     *                  contrib             by page contributor
-     *              date sort default to descending, string sorts to ascending
-     * 4. group:    show group headers for each change in sort keys
-     *              Note: keys with no duplicate cannot be grouped (i.e. name, page|id, mdate, cdate)
-     * 5. limit:    maximum number of results to return
-     * 6. spelldate:  use real month and day names instead of numeric dates (was 'inwords' [deprecated])
-     * 7. cols:     number of columns in displayed list (max = 6)
-     * 8. proper:   display page names and namespace in Proper Case (i.e. no _'s and Capitalised)
-     *              header/hdr = group headers only, name = page name only, both = both!
-     * 9. border:   turn on borders. 'inside' = between columns; 'outside' => border around table;
-     *              'both' => in and out; 'none' => neither
-     *10. fullregex:only useful on page name searches; allows a raw regex mode on the full page id
-     *11. nostart:  ignore any 'start' pages in namespace (based on "config:start")
-     *12. maxns:    maximum namespace level to be displayed; e.g. maxns=3 => one:two:three
-     *13. useheading:    show 1st page heading instead of page name ("title" also accepted)  [deprecated]
-     *14. display:  display format for page links: name, title or id
-     *15. snippet:  should an excerpt of the wikipage be shown:
-     *              use :tooltip to show as a pop-up only
-     *              use :<inline|plain|quoted>, <count>, <extent> to show 1st <count> items in list with an abstract
-     *                  extent always choice of chars, words, lines, or find (c? w? l? ~????)
-     *16. natsort:  use natural sorting order (good for words beginning with numbers)
-     *17. case:     respect case when sorting, i.e. a != A when sorting.  a-z then A-Z (opp. to PHP term, easier on average users)
-     *18. underline:show a faint underline between each link for clarity
-     *19. label:    title/label to be added at top of the list
-     *20. nomsg:    no empty results message
-     *
-     * All options are optional, and the list will default to a boring long 1-column list...
+     * @link https://www.dokuwiki.org/plugin:pagequery See PageQuery page for full details
      */
 	function handle($match, $state, $pos, &$handler) {
 
@@ -96,28 +56,29 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         $opt['query'] = $params[0];
 
         // establish some basic option defaults
-        $opt['sort'] = array();
-        $opt['filter'] = array();
-        $opt['fulltext'] = false;
-        $opt['fullregex'] = false;
-        $opt['group'] = false;
-        $opt['limit'] = 0;
-        $opt['maxns'] = 0;
-        $opt['hidestart'] = false;
-        $opt['spelldate'] = false;
-        $opt['cols'] = 1;
-        $opt['proper'] = 'none';
-        $opt['border'] = 'none';
-        $opt['snippet'] = array('type' => 'none');
-        $opt['display'] = 'name';
-        $opt['casesort'] = false;
-        $opt['natsort'] = false;
-        $opt['underline'] = false;
-        $opt['hidemsg'] = false;
-        $opt['label'] = '';
-        $opt['showcount'] = false;
-        $opt['hidejump'] = false;
-        $opt['dformat'] = "%d %b %Y";
+        $opt['sort'] = array();         // sort by various headings
+        $opt['filter'] = array();       // filtering by metadata prior to sorting
+        $opt['fulltext'] = false;       // search full-text; including file contents
+        $opt['fullregex'] = false;      // power-user regex search option--file name only
+        $opt['group'] = false;          // group the results based on sort headings
+        $opt['limit'] = 0;              // limit results to certain number
+        $opt['maxns'] = 0;              // max number of namespaces to display (i.e. ns depth)
+        $opt['hidestart'] = false;      // hide start pages
+        $opt['spelldate'] = false;      // spell out date headings in words where possible
+        $opt['cols'] = 1;               // number of displayed columns (fixed for table layout, max for column layout
+        $opt['proper'] = 'none';        // display file names in Proper Case
+        $opt['border'] = 'none';        // show borders around entire list and/or between columns
+        $opt['snippet'] = array('type' => 'none');  // show content snippets/abstracts
+        $opt['display'] = 'name';       // how page links should be displayed
+        $opt['casesort'] = false;       // allow case sorting
+        $opt['natsort'] = false;        // allow natural case sorting
+        $opt['underline'] = false;      // faint underline below each link for clarity
+        $opt['hidemsg'] = false;        // hide any error messages
+        $opt['label'] = '';             // label to put at top of the list
+        $opt['showcount'] = false;      // show the count of links found
+        $opt['hidejump'] = false;       // hide the jump to top link
+        $opt['dformat'] = "%d %b %Y";   // general dislay date format
+        $opt['layout'] = 'table';       // html layout type: table (1 col = div only) or columns (html 5 only)
 
         foreach ($params as $param) {
             list($option, $value) = explode('=', $param);
@@ -225,6 +186,12 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                             $opt['display'] = $value;
                     }
                     break;
+                case 'layout':
+                    if ($value != 'table' && $value != 'column') {
+                        $value = 'table';
+                    }
+                    $opt['layout'] = $value;
+                    break;
             }
         }
 		return $opt;
@@ -234,7 +201,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
     function render($mode, &$renderer, $opt) {
 
         if ( ! PHP_MAJOR_VERSION >= 5 && ! PHP_MINOR_VERSION >= 3) {
-            $renderer->doc .= "You must have PHP 5.3 or greater to use this pagequery plugin.  Please upgrade or use an older version of the plugin";
+            $renderer->doc .= "You must have PHP 5.3 or greater to use this pagequery plugin.  Please upgrade PHP or use an older version of the plugin";
             return false;
         }
 
@@ -244,11 +211,12 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         $excl_ns = array();
 
         if ($mode == 'xhtml') {
-            // first get a raw list of matching results
 
+            // first get a raw list of matching results
             if ($opt['fulltext']) {
                 // full text (Dokuwiki style) searching
                 $results = array_keys(ft_pageSearch($opt['query'], $highlight));
+
             } else {
                 // search by page id only
                 if ($opt['fullregex']) {
@@ -259,16 +227,20 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                     $pageonly = true;
                 }
 
-                if ($query == '*') $query = '.*';   // a lazy man's option!
+                if ($query == '*') {
+                    $query = '.*';   // a lazy man's option!
+                }
+
                 $results = $this->_page_lookup($query, $pageonly, $incl_ns, $excl_ns, $opt['hidestart'], $opt['maxns']);
             }
 
             if ($results === false) {
                 $empty = true;
                 $message = $this->getLang('regex_error');
+
             } elseif ( ! empty($results)) {
                 // *** this section is where the essential pagequery functionality happens... ***
-
+                //
                 // prepare the necessary sorting arrays, as per users options
                 $get_abstract = ($opt['snippet']['type'] != 'none');
                 list($sort_array, $sort_opts, $group_opts) = $this->_build_sorting_array($results, $get_abstract, $opt);
@@ -279,11 +251,14 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                     $empty = true;
                     $message = $this->getLang("empty_filter");
                 }
+
             } else {
                 $empty = true;
             }
 
+            // successful search...
             if ( ! $empty) {
+
                 // now do the sorting
                 $this->msort($sort_array, $sort_opts);
                 // limit the result list length if required; this can only be done after sorting!
@@ -293,6 +268,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 } else {
                     $count = count($sort_array);
                 }
+
                 // and finally the grouping
                 $keys = array('name', 'id', 'title', 'abstract', 'display');
                 if ($opt['group']) {
@@ -300,10 +276,13 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 } else {
                     $sorted_results = $this->mgroup($sort_array, $keys);
                 }
-                $renderer->doc .= $this->_render_list($sorted_results, $opt, $count);
+
+                $renderer->doc .= $this->_render_as_html($opt['layout'], $sorted_results, $opt, $count);
+
+            // no results...
             } else {
                 if ( ! $opt['hidemsg']) {
-                    $renderer->doc .= $this->_render_no_list($query, $message);
+                    $renderer->doc .= $this->_render_as_empty($query, $message);
                 }
             }
             return true;
@@ -313,23 +292,13 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
     }
 
 
-    private function _adjusted_height($sorted_results, $ratios) {
-        // ratio of different heading heights (%), to ensure more even use of columns (h1 -> h6)
-        $adjusted_height = 0;
-        foreach ($sorted_results as $row) {
-            $adjusted_height += $ratios[$row[0]];
-        }
-        return $adjusted_height;
-    }
-
-
     /**
      * Render a simple "no results" message
      *
      * @param string $query => original query
      * @return string
      */
-    private function _render_no_list($query, $error = '') {
+    private function _render_as_empty($query, $error = '') {
         $render = '<div class="pagequery noborder">' . DOKU_LF;
         $render .= '<p class="noresults"><span>pagequery</span>' . sprintf($this->getLang("no_results"),
                                   '<strong>' . $query . '</strong>') . '</p>' . DOKU_LF;
@@ -338,6 +307,12 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         }
         $render .= '</div>' . DOKU_LF;
         return $render;
+    }
+
+
+    private function _render_as_html($layout, $sorted_results, $opt, $count) {
+        $render_type = '_render_as_html_' . $layout;
+        return $this->$render_type($sorted_results, $opt, $count);
     }
 
 
@@ -350,7 +325,8 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
      *
      * @return string => HTML rendered list
      */
-    private function _render_list($sorted_results, $opt, $count) {
+    protected function _render_as_html_table($sorted_results, $opt, $count) {
+
         $ratios = array(.80, 1.3, 1.17, 1.1, 1.03, .96, .90);   // height ratios: link, h1, h2, h3, h4, h5, h6
         $render = '';
         $prev_was_heading = false;
@@ -361,7 +337,6 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         $col_height = $this->_adjusted_height($sorted_results, $ratios) / $opt['cols'];
         $cur_height = 0;
         $width = floor(100 / $opt['cols']);
-        $snippet_cnt = 0;    // needed by the snippet section for tracking
         $is_first = true;
 
         // basic result page markup (always needed)
@@ -369,18 +344,27 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         $no_table = ( ! $multi_col) ? ' notable' : '';
         $top_id = 'top-' . mt_rand();   // fixed anchor point to jump back to at top of the table
         $render .= '<div class="pagequery' . $outer_border . $no_table . '" id="' . $top_id . '">' . DOKU_LF;
-        if ($opt['showcount'] == true) $render .= '<div class="count">' . $count . '</div>' . DOKU_LF;
-        if ($opt['label'] != '') $render .= '<h1 class="title">' . $opt['label'] . '</h1>' . DOKU_LF;
-        if ($multi_col) $render .= '<table><tbody><tr>' . DOKU_LF;
+        if ($opt['showcount'] == true) {
+            $render .= '<div class="count">' . $count . '</div>' . DOKU_LF;
+        }
+        if ($opt['label'] != '') {
+            $render .= '<h1 class="title">' . $opt['label'] . '</h1>' . DOKU_LF;
+        }
+        if ($multi_col) {
+            $render .= '<table><tbody><tr>' . DOKU_LF;
+        }
 
         $inner_border = ($opt['border'] == 'inside' || $opt['border'] == 'both') ? '' : ' class="noborder" ';
 
         // now render the pagequery list
         foreach ($sorted_results as $line) {
+
             list($level, $name, $id, $title, $abstract, $display) = $line;
 
             $is_heading = ($level > 0);
-            if ($is_heading) $heading = $name;
+            if ($is_heading) {
+                $heading = $name;
+            }
 
             // is it time to start a new column?
             if ($can_start_col === false && $col < $opt['cols'] && $cur_height >= $col_height) {
@@ -411,15 +395,18 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 $prev_was_heading = true;
                 $cur_height = 0;
             }
+
             // finally display the appropriate heading or page link(s)
             if ($is_heading) {
                 // close previous sub list if necessary
                 if ( ! $prev_was_heading) {
                     $render .= '</ul>' . DOKU_LF;
                 }
-                if ($opt['proper'] == 'header' || $opt['proper'] == 'both') $heading = $this->_proper($heading);
+                if ($opt['proper'] == 'header' || $opt['proper'] == 'both') {
+                    $heading = $this->_proper($heading);
+                }
                 if ( ! empty($id)) {
-                    $heading = $this->_html_wikilink($id, $heading, 0, '', $opt, true);
+                    $heading = $this->_html_wikilink($id, $heading, 0, '', $opt, false, true);
                 }
                 $render .= "<h$level$indent_style>$heading</h$level>" . DOKU_LF;
                 $prev_was_heading = true;
@@ -430,9 +417,10 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                     $render .= "<ul$indent_style>";
                 }
                 // deal with normal page links
-                if ($opt['proper'] == 'name' || $opt['proper'] == 'both') $display = $this->_proper($display);
-                $link = $this->_html_wikilink($id, $display, $snippet_cnt, $abstract, $opt);
-                $snippet_cnt++;
+                if ($opt['proper'] == 'name' || $opt['proper'] == 'both') {
+                    $display = $this->_proper($display);
+                }
+                $link = $this->_html_wikilink($id, $display, $abstract, $opt);
                 $render .= $link;
                 $prev_was_heading = false;
             }
@@ -440,11 +428,131 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
             $is_first = false;
         }
         $render .= '</ul>' . DOKU_LF;
-        if ($multi_col) $render .= '</td></tr></tbody></table>' . DOKU_LF;
-        if ($opt['hidejump'] == false) $render .= '<a class="top" href="#' . $top_id . '">' . $this->getLang('link_to_top') . '</a>' . DOKU_LF;
+        if ($multi_col) {
+            $render .= '</td></tr></tbody></table>' . DOKU_LF;
+        }
+        if ($opt['hidejump'] == false) {
+            $render .= '<a class="top" href="#' . $top_id . '">' . $this->getLang('link_to_top') . '</a>' . DOKU_LF;
+        }
         $render .= '</div>' . DOKU_LF;
 
         return $render;
+    }
+
+
+
+     /**
+     * Render the final pagequery results list as HTML, indented and in columns as required
+     *
+     * @param array  $sorted_results
+     * @param array  $opt
+     * @param int    $count => count of results
+     *
+     * @return string => HTML rendered list
+     */
+    protected function _render_as_html_column($sorted_results, $opt, $count) {
+
+        $render = '';
+        $prev_was_heading = false;
+        $cont_level = 1;
+        $is_first = true;
+
+        $outer_border = '';
+        $inner_border = '';
+        $show_count = '';
+        $label = '';
+
+        // fixed anchor to jump back to at top
+        $top_id = 'top-' . mt_rand();
+
+        if ($opt['border'] == 'outside' || $opt['border'] == 'both') {
+            $outer_border = ' noborder';
+        }
+        if ($opt['border'] == 'inside' || $opt['border'] == 'both') {
+            $inner_border =  '.noinnerborder" ';
+        }
+        if ($opt['showcount'] == true) {
+            $show_count = '<div class="count">' . $count . '</div>' . DOKU_LF;
+        }
+        if ($opt['label'] != '') {
+            $label = '<h1 class="title">' . $opt['label'] . '</h1>' . DOKU_LF;
+        }
+
+        $render .= '<div class="pagequery' . $outer_border . '" id="' . $top_id . '">' . DOKU_LF . $show_count . $label;
+        $render .= '<div class="inner ' . $inner_border . '">';
+
+        // now render the pagequery list
+        foreach ($sorted_results as $line) {
+
+            // TODO: what is title still used for
+            list($level, $name, $id, $title, $abstract, $display) = $line;
+
+            $is_heading = ($level > 0);
+            if ($is_heading) {
+                $heading = $name;
+            }
+
+            // no need for indenting if there is no grouping
+            if ($opt['group'] === false) {
+                $indent_style = ' class="nogroup"';
+            } else {
+                $indent = ($is_heading) ? $level - 1 : $cont_level - 1;
+                $indent_style = ' style="margin-left:' . $indent * 10 . 'px"';
+            }
+
+            // finally display the appropriate heading or page link(s)
+            if ($is_heading) {
+
+                // close previous sub list if necessary
+                if ( ! $prev_was_heading) {
+                    $render .= '</ul>' . DOKU_LF;
+                }
+                if ($opt['proper'] == 'header' || $opt['proper'] == 'both') {
+                    $heading = $this->_proper($heading);
+                }
+                if ( ! empty($id)) {
+                    $heading = $this->_html_wikilink($id, $heading, 0, '', $opt, false, true);
+                }
+                $render .= "<h$level$indent_style>$heading</h$level>" . DOKU_LF;
+                $prev_was_heading = true;
+                $cont_level = $level + 1;
+
+            } else {
+                // open a new sub list if necessary
+                if ($prev_was_heading || $is_first) {
+                    $render .= "<ul$indent_style>";
+                }
+                // deal with normal page links
+                if ($opt['proper'] == 'name' || $opt['proper'] == 'both') {
+                    $display = $this->_proper($display);
+                }
+                $link = $this->_html_wikilink($id, $display, $abstract, $opt);
+                $render .= $link;
+                $prev_was_heading = false;
+            }
+            $is_first = false;
+        }
+
+        $render .= '</ul>' . DOKU_LF;
+
+        if ($opt['hidejump'] === false) {
+            $render .= '<a class="top" href="#' . $top_id . '">' . $this->getLang('link_to_top') . '</a>' . DOKU_LF;
+        }
+
+        $render .= '</div></div>' . DOKU_LF;
+
+        return $render;
+    }
+
+
+
+    private function _adjusted_height($sorted_results, $ratios) {
+        // ratio of different heading heights (%), to ensure more even use of columns (h1 -> h6)
+        $adjusted_height = 0;
+        foreach ($sorted_results as $row) {
+            $adjusted_height += $ratios[$row[0]];
+        }
+        return $adjusted_height;
     }
 
 
@@ -452,13 +560,17 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
      * Renders the page link, plus tooltip, abstract, casing, etc...
      * @param string $id
      * @param bool  $display
-     * @param int   $snippet_cnt
      * @param string $abstract
      * @param bool  $opt
+     * @param bool  $track_snippets
      * @param bool  $raw => unformatted (no html)
      */
-    private function _html_wikilink($id, $display, $snippet_cnt, $abstract, $opt, $raw = false) {
+    private function _html_wikilink($id, $display,  $abstract, $opt, $track_snippets = true, $raw = false) {
+        static $snippet_cnt = 0;
 
+        if ($track_snippets) {
+            $snippet_cnt++;
+        }
         $id = (strpos($id, ':') === false) ? ':' . $id : $id;   // : needed for root pages (root level)
 
         $type = $opt['snippet']['type'];
@@ -675,7 +787,9 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                         break;
                     case 'ns':
                         $value = getNS($id);
-                        if (empty($value)) $value = '[' . $conf['start'] . ']';
+                        if (empty($value)) {
+                            $value = '[' . $conf['start'] . ']';
+                        }
                         break;
                     case 'creator':
                         $value = $meta['creator'];
@@ -735,8 +849,9 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                         $value = $sort_array[$row][$key];
                     } elseif (isset($meta[$key])) {
                         $value = $meta[$key];
-                    } elseif (strpos($key, '|') !== false) {
-                        $keys = explode('|', $key);
+                    // allow for nested meta keys (e.g. date:created)
+                    } elseif (strpos($key, ':') !== false) {
+                        $keys = explode(':', $key);
                         if (isset($meta[$keys[0]][$keys[1]])) {
                             $value = $meta[$keys[0]][$keys[1]];
                         }
@@ -752,8 +867,12 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                         $display = str_replace($match[0], $value, $display);
                     }
                 }
+
+            // try to match any metadata field
             } elseif (isset($sort_array[$row][$display])) {
                 $display = $sort_array[$row][$display];
+            } else {
+                $display = $sort_array[$row]['name'];
             }
             $sort_array[$row]['display'] = $display;
 
@@ -836,6 +955,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 $idx++;
             }
         }
+
         return array($sort_array, $sort_opts, $group_opts);
     }
 
@@ -1069,7 +1189,6 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
      *                             $sort_opts['assoc'][<column>] = MSORT_KEEP_ASSOC | true
      * @return boolean
      */
-
     private function msort(&$sort_array, $sort_opts) {
 
         // if a full sort_opts array was passed
@@ -1154,6 +1273,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
     // real date column
     const MGROUP_REALDATE = '__realdate__';
 
+
     /**
      * group a multi-dimensional array by each level heading
      * @param array $sort_array : array to be grouped (result of 'msort' function)
@@ -1196,6 +1316,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         }
         return $results;
     }
+
 
     /**
      * private function used by mgroup only!
