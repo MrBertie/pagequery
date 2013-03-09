@@ -68,7 +68,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         $opt['cols'] = 1;               // number of displayed columns (fixed for table layout, max for column layout
         $opt['proper'] = 'none';        // display file names in Proper Case
         $opt['border'] = 'none';        // show borders around entire list and/or between columns
-        $opt['snippet'] = array('type' => 'none');  // show content snippets/abstracts
+        $opt['snippet'] = array('type' => 'none', 'count' => 0, 'extent' => '');  // show content snippets/abstracts
         $opt['display'] = 'name';       // how page links should be displayed
         $opt['casesort'] = false;       // allow case sorting
         $opt['natsort'] = false;        // allow natural case sorting
@@ -158,14 +158,23 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                     }
                     break;
                 case 'snippet':
-                    $options = explode(',', $value);
-                    $type = ( ! empty($options[0])) ? $options[0] : 'tooltip';
-                    $valid = array('none', 'tooltip', 'inline', 'plain', 'quoted');
-                    if ( ! in_array($type, $valid)) $type = 'tooltip';  // always valid!
-                    $count = ( ! empty($options[1])) ? $options[1] : 0;
-                    $extent = ( ! empty($options[2])) ? $options[2] : '';
-                    $opt['snippet'] = array('type' => $type, 'count' => $count, 'extent' => $extent);
-                    break;
+                    $default = 'tooltip';
+                    if (empty($value)) {
+                        $opt['snippet']['type'] = $default;
+                        break;
+                    } else {
+                        $options = explode(',', $value);
+                        $type = ( ! empty($options[0])) ? $options[0] : $opt['snippet']['type'];
+                        $count = ( ! empty($options[1])) ? $options[1] : $opt['snippet']['count'];
+                        $extent = ( ! empty($options[2])) ? $options[2] : $opt['snippet']['extent'];
+
+                        $valid = array('none', 'tooltip', 'inline', 'plain', 'quoted');
+                        if ( ! in_array($type, $valid)) {
+                            $type = $default;  // empty snippet type => tooltip
+                        }
+                        $opt['snippet'] = array('type' => $type, 'count' => $count, 'extent' => $extent);
+                        break;
+                    }
                 case 'label':
                     $opt['label'] = $value;
                     break;
@@ -572,16 +581,15 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
             $snippet_cnt++;
         }
         $id = (strpos($id, ':') === false) ? ':' . $id : $id;   // : needed for root pages (root level)
-
         $type = $opt['snippet']['type'];
-        $count = $opt['snippet']['count'];
-        $after= '';
-        $inline = '';
 
         if ($type == 'none') {
             // Plain old wikilink
             $link = html_wikilink($id, $display);
         } else {
+            $after = '';
+            $inline = '';
+            $count = $opt['snippet']['count'];
             $short = $this->_shorten($abstract, $opt['snippet']['extent']);   // shorten BEFORE replacing html entities!
             $short = htmlentities($short, ENT_QUOTES, 'UTF-8');
             $abstract = str_replace("\n\n", "\n", $abstract);
