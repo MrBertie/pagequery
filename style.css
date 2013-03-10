@@ -59,12 +59,13 @@ div.dokuwiki .pagequery .noinnerborder {
     column-rule: 0;
 }
 
-
+/*
 div.dokuwiki .pagequery ul {
     -webkit-column-break-inside:avoid;
     -moz-column-break-inside:avoid;
     column-break-inside:avoid;
 }
+*/
 
 div.dokuwiki .pagequery h1,
 div.dokuwiki .pagequery h2 {
