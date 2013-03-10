@@ -79,6 +79,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         $opt['hidejump'] = false;       // hide the jump to top link
         $opt['dformat'] = "%d %b %Y";   // general dislay date format
         $opt['layout'] = 'table';       // html layout type: table (1 col = div only) or columns (html 5 only)
+        $opt['fontsize'] = '';          // base fontsize of pagequery; best to use %
 
         foreach ($params as $param) {
             list($option, $value) = explode('=', $param);
@@ -200,6 +201,11 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                         $value = 'table';
                     }
                     $opt['layout'] = $value;
+                    break;
+                case 'fontsize':
+                    if ( ! empty($value)) {
+                        $opt['fontsize'] = $value;
+                    }
                     break;
             }
         }
@@ -347,12 +353,18 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         $cur_height = 0;
         $width = floor(100 / $opt['cols']);
         $is_first = true;
+        $fontsize = '';
 
         // basic result page markup (always needed)
         $outer_border = ($opt['border'] == 'outside' || $opt['border'] == 'both') ? '' : ' noborder';
         $no_table = ( ! $multi_col) ? ' notable' : '';
         $top_id = 'top-' . mt_rand();   // fixed anchor point to jump back to at top of the table
-        $render .= '<div class="pagequery' . $outer_border . $no_table . '" id="' . $top_id . '">' . DOKU_LF;
+        if ( ! empty($opt['fontsize'])) {
+            $fontsize = ' style="font-size:' . $opt['fontsize'] . '"';
+        }
+
+        $render .= '<div class="pagequery' . $outer_border . $no_table . '" id="' . $top_id . '"' . $fontsize . '>' . DOKU_LF;
+
         if ($opt['showcount'] == true) {
             $render .= '<div class="count">' . $count . '</div>' . DOKU_LF;
         }
@@ -470,15 +482,19 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         $inner_border = '';
         $show_count = '';
         $label = '';
+        $fontsize = '';
 
         // fixed anchor to jump back to at top
         $top_id = 'top-' . mt_rand();
+        if ( ! empty($opt['fontsize'])) {
+            $fontsize = ' style="font-size:' . $opt['fontsize'] . '"';
+        }
 
-        if ($opt['border'] == 'outside' || $opt['border'] == 'both') {
+        if ($opt['border'] != 'outside' && $opt['border'] != 'both') {
             $outer_border = ' noborder';
         }
-        if ($opt['border'] == 'inside' || $opt['border'] == 'both') {
-            $inner_border =  '.noinnerborder" ';
+        if ($opt['border'] != 'inside' && $opt['border'] != 'both') {
+            $inner_border =  ' noinnerborder" ';
         }
         if ($opt['showcount'] == true) {
             $show_count = '<div class="count">' . $count . '</div>' . DOKU_LF;
@@ -487,8 +503,8 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
             $label = '<h1 class="title">' . $opt['label'] . '</h1>' . DOKU_LF;
         }
 
-        $render .= '<div class="pagequery' . $outer_border . '" id="' . $top_id . '">' . DOKU_LF . $show_count . $label;
-        $render .= '<div class="inner ' . $inner_border . '">';
+        $render .= '<div class="pagequery' . $outer_border . '" id="' . $top_id . '"' . $fontsize . '>' . DOKU_LF . $show_count . $label;
+        $render .= '<div class="inner' . $inner_border . '">';
 
         // now render the pagequery list
         foreach ($sorted_results as $line) {
