@@ -427,7 +427,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                     $heading = $this->_proper($heading);
                 }
                 if ( ! empty($id)) {
-                    $heading = $this->_html_wikilink($id, $heading, 0, '', $opt, false, true);
+                    $heading = $this->_html_wikilink($id, $heading, '', $opt, false, true);
                 }
                 $render .= "<h$level$indent_style>$heading</h$level>" . DOKU_LF;
                 $prev_was_heading = true;
@@ -536,7 +536,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                     $heading = $this->_proper($heading);
                 }
                 if ( ! empty($id)) {
-                    $heading = $this->_html_wikilink($id, $heading, 0, '', $opt, false, true);
+                    $heading = $this->_html_wikilink($id, $heading, '', $opt, false, true);
                 }
                 $render .= "<h$level$indent_style>$heading</h$level>" . DOKU_LF;
                 $prev_was_heading = true;
@@ -597,6 +597,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
             $snippet_cnt++;
         }
         $id = (strpos($id, ':') === false) ? ':' . $id : $id;   // : needed for root pages (root level)
+
         $type = $opt['snippet']['type'];
 
         if ($type == 'none') {
