@@ -80,6 +80,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         $opt['dformat'] = "%d %b %Y";   // general dislay date format
         $opt['layout'] = 'table';       // html layout type: table (1 col = div only) or columns (html 5 only)
         $opt['fontsize'] = '';          // base fontsize of pagequery; best to use %
+        $opt['bullet'] = 'none';        // bullet style for list items
 
         foreach ($params as $param) {
             list($option, $value) = explode('=', $param);
@@ -177,7 +178,8 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                         break;
                     }
                 case 'label':
-                    $opt['label'] = $value;
+                case 'bullet':
+                    $opt[$option] = $value;
                     break;
                 case 'display':
                     switch ($value) {
@@ -314,11 +316,11 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
      * @return string
      */
     private function _render_as_empty($query, $error = '') {
-        $render = '<div class="pagequery noborder">' . DOKU_LF;
-        $render .= '<p class="noresults"><span>pagequery</span>' . sprintf($this->getLang("no_results"),
+        $render = '<div class="pagequery no-border">' . DOKU_LF;
+        $render .= '<p class="no-results"><span>pagequery</span>' . sprintf($this->getLang("no_results"),
                                   '<strong>' . $query . '</strong>') . '</p>' . DOKU_LF;
         if ( ! empty($error)) {
-            $render .= '<p class="noresults">' . $error . '</p>' . DOKU_LF;
+            $render .= '<p class="no-results">' . $error . '</p>' . DOKU_LF;
         }
         $render .= '</div>' . DOKU_LF;
         return $render;
@@ -354,16 +356,25 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         $width = floor(100 / $opt['cols']);
         $is_first = true;
         $fontsize = '';
+        $list_style = '';
 
         // basic result page markup (always needed)
-        $outer_border = ($opt['border'] == 'outside' || $opt['border'] == 'both') ? '' : ' noborder';
-        $no_table = ( ! $multi_col) ? ' notable' : '';
-        $top_id = 'top-' . mt_rand();   // fixed anchor point to jump back to at top of the table
-        if ( ! empty($opt['fontsize'])) {
-            $fontsize = ' style="font-size:' . $opt['fontsize'] . '"';
-        }
+        $outer_border = ($opt['border'] == 'outside' || $opt['border'] == 'both') ? 'border' : '';
+        $inner_border = ($opt['border'] == 'inside' || $opt['border'] == 'both') ? 'border' : '';
+        $tableless = ( ! $multi_col) ? 'tableless' : '';
 
-        $render .= '<div class="pagequery' . $outer_border . $no_table . '" id="' . $top_id . '"' . $fontsize . '>' . DOKU_LF;
+        // fixed anchor point to jump back to at top of the table
+        $top_id = 'top-' . mt_rand();
+
+        if ( ! empty($opt['fontsize'])) {
+            $fontsize = 'font-size:' . $opt['fontsize'];
+        }
+        if ($opt['bullet'] != 'none') {
+            $list_style = 'list-style-position:inside;list-style-type:' . $opt['bullet'];
+        }
+        $can_indent = $opt['group'];
+
+        $render .= '<div class="pagequery ' . $outer_border . " " . $tableless . '" id="' . $top_id . '" style="' . $fontsize . '">' . DOKU_LF;
 
         if ($opt['showcount'] == true) {
             $render .= '<div class="count">' . $count . '</div>' . DOKU_LF;
@@ -375,7 +386,6 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
             $render .= '<table><tbody><tr>' . DOKU_LF;
         }
 
-        $inner_border = ($opt['border'] == 'inside' || $opt['border'] == 'both') ? '' : ' class="noborder" ';
 
         // now render the pagequery list
         foreach ($sorted_results as $line) {
@@ -394,11 +404,9 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
             }
 
             // no need for indenting if there is no grouping
-            if ($opt['group'] === false) {
-                $indent_style = ' class="nogroup"';
-            } else {
+            if ($can_indent) {
                 $indent = ($is_heading) ? $level - 1 : $cont_level - 1;
-                $indent_style = ' style="margin-left:' . $indent * 10 . 'px"';
+                $indent_style = 'margin-left:' . $indent * 10 . 'px;';
             }
 
             // Begin new column if: 1) we are at the start, 2) last item was not a heading or 3) if there is no grouping
@@ -408,10 +416,11 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 $col_close = ( ! $is_heading) ? '<a title="'. $jump_tip . '" href="#' .
                                 $top_id . '">' . "<h$cont_level>§... </h$cont_level></a>" : '';
                 $col_close = ( ! $is_first) ? $col_close . '</ul></td>' . DOKU_LF : '';
-                $col_open = ( ! $is_first && ! $is_heading) ? "<h$cont_level$indent_style>" . "$heading...</h$cont_level>" : '';
-                $td = ($multi_col) ? '<td' . $inner_border . ' valign="top" width="' . $width . '%">' : '';
+                $col_open = ( ! $is_first && ! $is_heading) ? '<h' . $cont_level . ' style="' . $indent_style . '">' . $heading . '...</h' . $cont_level . '>' : '';
+                $td = ($multi_col) ? '<td class="' . $inner_border . '" valign="top" width="' . $width . '%">' : '';
                 $render .= $col_close . $td . $col_open . DOKU_LF;
                 $can_start_col = false;
+
                 // needed to correctly style page link lists <ul>...
                 $prev_was_heading = true;
                 $cur_height = 0;
@@ -429,13 +438,13 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 if ( ! empty($id)) {
                     $heading = $this->_html_wikilink($id, $heading, '', $opt, false, true);
                 }
-                $render .= "<h$level$indent_style>$heading</h$level>" . DOKU_LF;
+                $render .= '<h' . $level . ' style="' . $indent_style . '">' . $heading . '</h' . $level . '>' . DOKU_LF;
                 $prev_was_heading = true;
                 $cont_level = $level + 1;
             } else {
                 // open a new sub list if necessary
                 if ($prev_was_heading || $is_first) {
-                    $render .= "<ul$indent_style>";
+                    $render .= '<ul style="' . $indent_style . $list_style . '">';
                 }
                 // deal with normal page links
                 if ($opt['proper'] == 'name' || $opt['proper'] == 'both') {
@@ -483,18 +492,19 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         $show_count = '';
         $label = '';
         $fontsize = '';
+        $list_style = '';
 
         // fixed anchor to jump back to at top
         $top_id = 'top-' . mt_rand();
-        if ( ! empty($opt['fontsize'])) {
-            $fontsize = ' style="font-size:' . $opt['fontsize'] . '"';
-        }
 
-        if ($opt['border'] != 'outside' && $opt['border'] != 'both') {
-            $outer_border = ' noborder';
+        if ( ! empty($opt['fontsize'])) {
+            $fontsize = 'font-size:' . $opt['fontsize'];
         }
-        if ($opt['border'] != 'inside' && $opt['border'] != 'both') {
-            $inner_border =  ' noinnerborder" ';
+        if ($opt['border'] == 'outside' || $opt['border'] == 'both') {
+            $outer_border = 'border';
+        }
+        if ($opt['border'] == 'inside'|| $opt['border'] == 'both') {
+            $inner_border =  'inner-border" ';
         }
         if ($opt['showcount'] == true) {
             $show_count = '<div class="count">' . $count . '</div>' . DOKU_LF;
@@ -502,9 +512,15 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         if ($opt['label'] != '') {
             $label = '<h1 class="title">' . $opt['label'] . '</h1>' . DOKU_LF;
         }
+        if ($opt['bullet'] != 'none') {
+            $list_style = 'list-style-position:inside;list-style-type:' . $opt['bullet'];
+        }
+        // no need for indenting if there is no grouping
+        $can_indent = $opt['group'];
 
-        $render .= '<div class="pagequery' . $outer_border . '" id="' . $top_id . '"' . $fontsize . '>' . DOKU_LF . $show_count . $label;
-        $render .= '<div class="inner' . $inner_border . '">';
+        $render .= '<div class="pagequery ' . $outer_border . '" id="' . $top_id . '" style="' . $fontsize . '">' .
+                    DOKU_LF . $show_count . $label;
+        $render .= '<div class="inner ' . $inner_border . '">';
 
         // now render the pagequery list
         foreach ($sorted_results as $line) {
@@ -517,12 +533,9 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 $heading = $name;
             }
 
-            // no need for indenting if there is no grouping
-            if ($opt['group'] === false) {
-                $indent_style = ' class="nogroup"';
-            } else {
+            if ($can_indent) {
                 $indent = ($is_heading) ? $level - 1 : $cont_level - 1;
-                $indent_style = ' style="margin-left:' . $indent * 10 . 'px"';
+                $indent_style = 'margin-left:' . $indent * 10 . 'px;';
             }
 
             // finally display the appropriate heading or page link(s)
@@ -538,14 +551,14 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 if ( ! empty($id)) {
                     $heading = $this->_html_wikilink($id, $heading, '', $opt, false, true);
                 }
-                $render .= "<h$level$indent_style>$heading</h$level>" . DOKU_LF;
+                $render .= '<h' . $level . ' style="' . $indent_style . '">' . $heading . '</h' . $level . '>' . DOKU_LF;
                 $prev_was_heading = true;
                 $cont_level = $level + 1;
 
             } else {
                 // open a new sub list if necessary
                 if ($prev_was_heading || $is_first) {
-                    $render .= "<ul$indent_style>";
+                    $render .= '<ul style="' . $indent_style . $list_style . '">';
                 }
                 // deal with normal page links
                 if ($opt['proper'] == 'name' || $opt['proper'] == 'both') {
@@ -625,11 +638,11 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 $inline .= '<span class=inline>' . $short . '</span>';
             }
         }
-        $noborder = ($opt['underline']) ? '' : ' class="noborder"';
+        $border = ($opt['underline']) ? 'border' : '';
         if ($raw) {
             $wikilink = $link . $inline;
         } else {
-            $wikilink = "<li$noborder>" . $link . $inline . '</li>' . DOKU_LF . $after;
+            $wikilink = '<li class="' . $border . '">' . $link . $inline . '</li>' . DOKU_LF . $after;
         }
         return $wikilink;
     }
