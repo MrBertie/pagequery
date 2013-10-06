@@ -1,11 +1,11 @@
 /* Basic pagequery frame */
 
 div.dokuwiki .pagequery {
-	border-color:#D7D5D4;
+    border-color:#D7D5D4;
     border-radius: 6px;
     -moz-border-radius:6px;
     -webkit-border-radius:6px;
-	border-style:solid;
+    border-style:solid;
     border-width:0;
     padding:3px;
     font-size: 90%;
@@ -13,6 +13,7 @@ div.dokuwiki .pagequery {
     margin:0 0 1em 0;
     overflow: hidden;
     position:relative;
+    text-align: left;
 }
 
 div.dokuwiki .pagequery.border {

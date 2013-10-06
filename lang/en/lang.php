@@ -13,3 +13,4 @@ $lang['jump_to_top']  = 'Back to top of this page list';
 $lang['link_to_top']  = 'Top ↑';
 $lang['regex_error']  = 'There is an error in the regular expression.  Check and try again.';
 $lang['empty_filter'] = 'The filter expression returned no results.';
+$lang['pagequery']    = 'PageQuery';

@@ -1,0 +1,43 @@
+pagequery>* | .* | exclude ns: ^ |-ns: | iinclude ns: @ | ns: | . | .. | <text> | <regex>
+fulltext Full-text search of page content
+fullregex Search the full page id using regex
+sort=<column>:<direction>	Keys to sort by, in order of sorting; sort=a:asc,name:asc
+    a, ab, abc	By 1st letter, 2-letters, or 3-letters
+    name, pagename By page name [not grouped]
+    title, heading By page title (or 1st heading) [not grouped]
+    id, pageid By full page id, including namespace [not grouped]
+    ns By namespace (without page name)
+    mdate, cdate By modified/created dates (full) [not grouped]
+    m[year][month][day] By [m]odified [year][month][day]
+    c[year][month][day] By [c]reated [year][month][day]s
+    creator By page author
+    contributor By page contributor(s)	sort=contributor:asc
+    link Links on this page, delimited by spaces
+    backlinks Links to this page, delimited by spaces
+    :asc|:a Ascending, e.g. a → z, 1 → 10
+    :desc|:d Descending, e.g. z → a, 10 → 1
+filter=<regex|text|date>	Filter the result list, using regex. =! mean exclude; , between options
+group Show a group header for each change in sort keys
+limit=<number> Maximum number of results to return
+spelldate Use real month and day names instead of numeric dates
+cols=<number> Number of columns in displayed list
+proper=name|header|both	Display page names and/or namespaces in Proper Case
+border=none|inside|outside|both	Show a border around table columns
+hidestart Ignore any default start pages in the namespace(s)
+display=<text>{meta} How to display the page links, using page's metadata via replace strings in {}
+snippet=tooltip|inline|plain|quoted	Controls how the page snippet (preview) is displayed
+    <format>,<count>,<extent>
+    <format>: one of the formats listed below: inline, plain, quoted
+    <count>: to show 1st <count> items in list with an preview	all
+    <extent>: can be choice of [c]hars, [w]ords, [l]ines, or [~]<stop at>
+maxns=<number> The number of namespace levels to display.
+case Honour case when sorting, i.e. a..z then A..Z
+natsort	Use PHP's natural sorting functions, e.g. 1,2,10,12 rather than 1,10,12,2
+underline Show a faint underline between each link for clarity
+label=<text> A label to be displayed at the top of the PageQuery list
+hidemsg	Hide any empty result messages
+hidejump Hide the “Jump To Top” link
+showcount Show the total count of page links at bottom of list
+layout=table|column	choose between table or CSS3 column layout
+fontsize=100%  Set the base font size for the pagequery list. You can use any CSS size unit
+bullet=none|disc|circle|square Bullet style for list items

@@ -16,25 +16,32 @@ if (!defined('DOKU_PLUGIN')) define('DOKU_PLUGIN',DOKU_INC.'lib/plugins/');
 require_once(DOKU_PLUGIN . 'syntax.php');
 require_once(DOKU_INC . 'inc/fulltext.php');
 
+
+
 class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
 
     const MAX_COLS = 12;
 
-	function getType() {
-		return 'substition';
-	}
 
-	function getPType() {
-		return 'block';
-	}
+    function getType() {
+        return 'substition';
+    }
 
-	function getSort() {
-		return 98;
-	}
 
-	function connectTo($mode) {
-		$this->Lexer->addSpecialPattern('\{\{pagequery>.*?\}\}', $mode, 'plugin_pagequery');
-	}
+    function getPType() {
+        return 'block';
+    }
+
+
+    function getSort() {
+        return 98;
+    }
+
+
+    function connectTo($mode) {
+        // this regex allows for multiline syntax for easier reading
+        $this->Lexer->addSpecialPattern('\{\{pagequery>(?m).*?(?-m)\}\}', $mode, 'plugin_pagequery');
+    }
 
 
     /**
@@ -47,12 +54,14 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
      *
      * @link https://www.dokuwiki.org/plugin:pagequery See PageQuery page for full details
      */
-	function handle($match, $state, $pos, &$handler) {
+    function handle($match, $state, $pos, &$handler) {
 
         $opt = array();
+        $match = substr($match, 12, -2); // strip markup "{{pagequery>...}}"
+        $params = explode(';', $match);
+        // remove any trailing spaces due to multiline syntax
+        $params = array_map('trim', $params);
 
-		$match = substr($match, 12, -2); // strip markup "{{pagequery>...}}"
-		$params = explode(';', $match);
         $opt['query'] = $params[0];
 
         // establish some basic option defaults
@@ -211,7 +220,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                     break;
             }
         }
-		return $opt;
+            return $opt;
 	}
 
 
@@ -525,7 +534,6 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         // now render the pagequery list
         foreach ($sorted_results as $line) {
 
-            // TODO: what is title still used for
             list($level, $name, $id, $title, $abstract, $display) = $line;
 
             $is_heading = ($level > 0);
@@ -764,7 +772,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         $wformat = array();
         $extrakeys = array();
 
-        $row = 0;
+        $cnt = 0;
 
         // look for 'abc' by title instead of name ('abc' by pageid makes little sense)
         // title takes precedence over name (should you try to sort by both...why?)
@@ -774,7 +782,13 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         $extrakeys = array_diff_key($opt['filter'], $opt['sort']);
         $col_keys = array_merge($opt['sort'], $extrakeys);
 
+        // it is more effecient to get all the backlinks at once from the indexer metadata
+        if (isset($col_keys['backlinks'])) {
+            $backlinks = idx_get_indexer()->lookupKey('relation_references', $ids);
+        }
+
         foreach ($ids as $id) {
+
             // getting metadata is very time-consuming, hence ONCE per displayed row
             $meta = p_get_metadata ($id, false, true);
 
@@ -784,35 +798,41 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
             // establish page name (without namespace)
             $name = noNS($id);
 
+            // ref to current row, used through out function
+            $row = &$sort_array[$cnt];
+
             // first column is the basic page id
-            $sort_array[$row]['id'] = $id;
+            $row['id'] = $id;
 
             // second column is the display 'name' (used when sorting by 'name')
             // this also avoids rebuilding the display name when building links later (DRY)
-            $sort_array[$row]['name'] = $name;
+            $row['name'] = $name;
 
             // third column: cache the display name; taken from metadata => 1st heading
             // used when sorting by 'title'
             $title = (isset($meta['title']) && ! empty($meta['title'])) ? $meta['title'] : $name;
-            $sort_array[$row]['title'] = $title;
+            $row['title'] = $title;
+
+            // needed later in the a, ab ,abc clauses
+            $abc = ($from_title) ? $title : $name;
 
             // fourth column: cache the page abstract if needed; this saves a lot of time later
             // and avoids repeated slow metadata retrievals (v. slow!)
             $abstract = ($get_abstract) ? $meta['description']['abstract'] : '';
-            $sort_array[$row]['abstract'] = $abstract;
+            $row['abstract'] = $abstract;
 
             // fifth column is the displayed text for links; set below
-            $sort_array[$row]['display'] = '';
+            $row['display'] = '';
 
-            // cache of full date for this row
+            // reset cache of full date for this row
             $real_date = 0;
 
+            // ...optional columns
             foreach ($col_keys as $key => $void) {
                 switch ($key) {
                     case 'a':
                     case 'ab':
                     case 'abc':
-                        $abc = ($from_title) ? $title : $name;
                         $value = $this->_first(strtolower($abc), strlen($key));
                         break;
                     case 'name':
@@ -833,13 +853,20 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                         $value = $meta['creator'];
                         break;
                     case 'contributor':
-                        $value = implode(';', $meta['contributor']);
+                        $value = implode(' ', $meta['contributor']);
                         break;
                     case 'mdate':
                         $value = $meta['date']['modified'];
                         break;
                     case 'cdate':
                         $value = $meta['date']['created'];
+                        break;
+                    case 'links':
+                        $value = $this->_join_keys_if(' ', $meta['relation']['references']);
+                        break;
+                    case 'backlinks':
+                        $value = implode(' ', current($backlinks));
+                        next($backlinks);
                         break;
                     default:
                         // date sorting types (groupable)
@@ -849,42 +876,38 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                             // not per sort column--the date should remain same across all columns
                             // this is always the last column!
                             if ($real_date == 0) {
-                                if ($dtype == 'c') {
-                                    $real_date = $meta['date']['created'];
-                                } else {
-                                    $real_date = $meta['date']['modified'];
-                                }
-                                $sort_array[$row][self::MGROUP_REALDATE] = $real_date;
+                                $real_date = ($dtype == 'c') ? $meta['date']['created'] : $meta['date']['modified'];
+                                $row[self::MGROUP_REALDATE] = $real_date;
                             }
                             // only set date formats once per sort column/key (not per id!), i.e. on first row
-                            if ($row == 0) {
+                            if ($cnt == 0) {
                                 $dformat[$key] = $this->_date_format($key);
                                 // collect date in word format for potential use in grouping
-                                if ($opt['spelldate']) {
-                                    $wformat[$key] = $this->_date_format_words($dformat[$key]);
-                                } else {
-                                    $wformat[$key] = '';
-                                }
+                                $wformat[$key] = ($opt['spelldate']) ? $this->_date_format_words($dformat[$key]) : '';
                             }
                             // create a string date used for sorting only
                             // (we cannot just use the real date otherwise it would not group correctly)
                             $value = strftime($dformat[$key], $real_date);
                         }
                 }
-                $sort_array[$row][$key] = $value;
+                // set the optional column
+                $row[$key] = $value;
             }
 
-            // allow for custom display formatting
+            /* provide custom display formatting via string templating {...} */
+
             $key = '';
             $matches = array();
             $display = $opt['display'];
             $matched = preg_match_all('/\{(.+?)\}/', $display, $matches, PREG_SET_ORDER);
+
+            // first try to use the custom column names as entered by user
             if ($matched > 0) {
                 foreach ($matches as $match) {
                     $key = $match[1];
                     $value = null;
-                    if (isset($sort_array[$row][$key])) {
-                        $value = $sort_array[$row][$key];
+                    if (isset($row[$key])) {
+                        $value = $row[$key];
                     } elseif (isset($meta[$key])) {
                         $value = $meta[$key];
                     // allow for nested meta keys (e.g. date:created)
@@ -906,21 +929,26 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                     }
                 }
 
-            // try to match any metadata field
-            } elseif (isset($sort_array[$row][$display])) {
-                $display = $sort_array[$row][$display];
-            } else {
-                $display = $sort_array[$row]['name'];
-            }
-            $sort_array[$row]['display'] = $display;
+            // try to match any metadata field; to allow for plain single word display settings
+            // e.g. display=title or display=name
+            } elseif (isset($row[$display])) {
+                $display = $row[$display];
 
-            $row++;
+            // if all else fails then used the page name (always available)
+            } else {
+                $display = $row['name'];
+            }
+            $row['display'] = $display;
+
+            $cnt++;
         }
+
 
         $idx = 0;
         foreach ($opt['sort'] as $key => $value) {
 
             $sort_opts['key'][] = $key;
+
 
             // now the sort direction
             switch ($value) {
@@ -953,6 +981,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
             }
             $sort_opts['dir'][] = $dir;
 
+
             // set the sort array's data type
             switch ($key) {
                 case 'mdate':
@@ -969,6 +998,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                     }
             }
             $sort_opts['type'][] = $type;
+
 
             // now establish grouping options
             switch ($key) {
@@ -997,6 +1027,22 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         return array($sort_array, $sort_opts, $group_opts);
     }
 
+
+    private function _join_keys_if($delim, $arr) {
+        $result = '';
+        if ( ! empty($arr)) {
+            foreach ($arr as $key => $value) {
+                if ($value === true) {
+                    $result .= $key . $delim;
+                }
+            }
+            if ( ! empty($result)) {
+                $result = substr($result, 0, -1);
+            }
+        }
+        return $result;
+    }
+    
 
     // returns first $count letters from $text
     private function _first($text, $count) {
@@ -1398,4 +1444,3 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         }
     }
 }
-?>
