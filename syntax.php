@@ -117,7 +117,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 case 'filter':
                     $fields = explode(',', $value);
                     foreach ($fields as $field) {
-                        list($key, $expr) = explode(':', $field);
+                        list($key, $expr) = explode(':', $field, 2);
                         // allow for a few common naming differences
                         switch ($key) {
                             case 'pagename':
