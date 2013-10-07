@@ -14,11 +14,10 @@ class action_plugin_pagequery extends DokuWiki_Action_Plugin {
 
     function insert_button(& $event, $param) {
         $event->data[] = array (
-            'type'   => 'picker',
+            'type'   => 'dialog',
             'title'  => $this->getLang('pagequery'),
-            'icon'   => DOKU_PLUGIN . 'pagequery/images/pagequery.png',
+            'icon'   => '../../plugins/pagequery/images/pagequery.png',
             'list'   => $this->_syntax_list(),
-            'icobase'=> '',
             'block'  => false
         );
     }

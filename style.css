@@ -205,3 +205,7 @@ div.dokuwiki .pagequery p.no-results span {
     padding:3px 6px;
 }
 
+.pg-dialog .ui-dialog-content {
+    font-size: 80%;
+}
+
