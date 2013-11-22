@@ -53,9 +53,9 @@ div.dokuwiki .pagequery .inner {
     column-width: 15em;
     -moz-column-width: 15em;
     -webkit-column-width: 15em;
-    column-gap: 1em;
-    -moz-column-gap: 1em;
-    -webkit-column-gap: 1em;
+    column-gap: 1.5em;
+    -moz-column-gap: 1.5em;
+    -webkit-column-gap: 1.5em;
     column-rule: 0;
     -moz-column-rule: 0;
     -webkit-column-rule: 0;
@@ -169,7 +169,7 @@ div.dokuwiki .pagequery a.top {
     right:0.5em;
 }
 div.dokuwiki .pagequery .count {
-    left: 0.5em;
+    right: 4.5em;
 }
 
 /* credit: blockquote:plugin */

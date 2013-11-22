@@ -343,7 +343,9 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
 
 
     /**
-     * Render the final pagequery results list as HTML, indented and in columns as required
+     * Render the final pagequery results list as HTML, indented and in columns as required.
+     *
+     * DEPRECATED --- I would like to scrap this ASAP (old browsers only).
      *
      * @param array  $sorted_results
      * @param array  $opt
@@ -481,13 +483,13 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
 
 
      /**
-     * Render the final pagequery results list as HTML, indented and in columns as required
+     * Render the final pagequery results list in an HTML column, indented and in columns as required
      *
      * @param array  $sorted_results
      * @param array  $opt
      * @param int    $count => count of results
      *
-     * @return string => HTML rendered list
+     * @return string HTML rendered list
      */
     protected function _render_as_html_column($sorted_results, $opt, $count) {
 
@@ -499,11 +501,12 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         $outer_border = '';
         $inner_border = '';
         $show_count = '';
+        $show_jump = '';
         $label = '';
         $fontsize = '';
         $list_style = '';
 
-        // fixed anchor to jump back to at top
+        // A fixed anchor to jump back to at top
         $top_id = 'top-' . mt_rand();
 
         if ( ! empty($opt['fontsize'])) {
@@ -516,24 +519,25 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
             $inner_border =  'inner-border" ';
         }
         if ($opt['showcount'] == true) {
-            $show_count = '<div class="count">' . $count . '</div>' . DOKU_LF;
+            $show_count = '<div class="count">' . $count . ' ∞</div>' . DOKU_LF;
         }
         if ($opt['label'] != '') {
             $label = '<h1 class="title">' . $opt['label'] . '</h1>' . DOKU_LF;
+        }        if ($opt['hidejump'] === false) {
+            $show_jump = '<a class="top" href="#' . $top_id . '">' . $this->getLang('link_to_top') . '</a>' . DOKU_LF;
         }
         if ($opt['bullet'] != 'none') {
             $list_style = 'list-style-position:inside;list-style-type:' . $opt['bullet'];
         }
-        // no need for indenting if there is no grouping
+
+
+        // no grouping = no indenting
         $can_indent = $opt['group'];
 
-        $render .= '<div class="pagequery ' . $outer_border . '" id="' . $top_id . '" style="' . $fontsize . '">' .
-                    DOKU_LF . $show_count . $label;
-        $render .= '<div class="inner ' . $inner_border . '">';
-
-        // now render the pagequery list
+        // now prepare the actual pagequery list
+        $pagequery = '';
         foreach ($sorted_results as $line) {
-
+            $heading = '';
             list($level, $name, $id, $title, $abstract, $display) = $line;
 
             $is_heading = ($level > 0);
@@ -544,6 +548,8 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
             if ($can_indent) {
                 $indent = ($is_heading) ? $level - 1 : $cont_level - 1;
                 $indent_style = 'margin-left:' . $indent * 10 . 'px;';
+            } else {
+                $indent_style = '';
             }
 
             // finally display the appropriate heading or page link(s)
@@ -551,7 +557,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
 
                 // close previous sub list if necessary
                 if ( ! $prev_was_heading) {
-                    $render .= '</ul>' . DOKU_LF;
+                    $pagequery .= '</ul>' . DOKU_LF;
                 }
                 if ($opt['proper'] == 'header' || $opt['proper'] == 'both') {
                     $heading = $this->_proper($heading);
@@ -559,34 +565,32 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 if ( ! empty($id)) {
                     $heading = $this->_html_wikilink($id, $heading, '', $opt, false, true);
                 }
-                $render .= '<h' . $level . ' style="' . $indent_style . '">' . $heading . '</h' . $level . '>' . DOKU_LF;
+                $pagequery .= '<h' . $level . ' style="' . $indent_style . '">' . $heading . '</h' . $level . '>' . DOKU_LF;
                 $prev_was_heading = true;
                 $cont_level = $level + 1;
 
             } else {
                 // open a new sub list if necessary
                 if ($prev_was_heading || $is_first) {
-                    $render .= '<ul style="' . $indent_style . $list_style . '">';
+                    $pagequery .= '<ul style="' . $indent_style . $list_style . '">';
                 }
                 // deal with normal page links
                 if ($opt['proper'] == 'name' || $opt['proper'] == 'both') {
                     $display = $this->_proper($display);
                 }
                 $link = $this->_html_wikilink($id, $display, $abstract, $opt);
-                $render .= $link;
+                $pagequery .= $link;
                 $prev_was_heading = false;
             }
             $is_first = false;
         }
 
+        $render .= '<div class="pagequery ' . $outer_border . '" id="' . $top_id . '" style="' . $fontsize . '">' . DOKU_LF;
+        $render .= $show_count . $show_jump . $label . DOKU_LF;
+        $render .= '<div class="inner ' . $inner_border . '">' . DOKU_LF;
+        $render .= $pagequery . DOKU_LF;
         $render .= '</ul>' . DOKU_LF;
-
-        if ($opt['hidejump'] === false) {
-            $render .= '<a class="top" href="#' . $top_id . '">' . $this->getLang('link_to_top') . '</a>' . DOKU_LF;
-        }
-
         $render .= '</div></div>' . DOKU_LF;
-
         return $render;
     }
 
@@ -605,11 +609,12 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
     /**
      * Renders the page link, plus tooltip, abstract, casing, etc...
      * @param string $id
-     * @param bool  $display
+     * @param bool $display
      * @param string $abstract
-     * @param bool  $opt
-     * @param bool  $track_snippets
-     * @param bool  $raw => unformatted (no html)
+     * @param array $opt
+     * @param bool $track_snippets
+     * @param bool $raw => non-formatted (no html)
+     * @return string
      */
     private function _html_wikilink($id, $display,  $abstract, $opt, $track_snippets = true, $raw = false) {
         static $snippet_cnt = 0;
@@ -790,7 +795,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         foreach ($ids as $id) {
 
             // getting metadata is very time-consuming, hence ONCE per displayed row
-            $meta = p_get_metadata ($id, false, true);
+            $meta = p_get_metadata($id, '', METADATA_DONT_RENDER);
 
             if ( ! isset($meta['date']['modified'])) {
                 $meta['date']['modified'] = $meta['date']['created'];
