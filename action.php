@@ -24,7 +24,7 @@ class action_plugin_pagequery extends DokuWiki_Action_Plugin {
 
 
     private function _cheatsheet() {
-        $list = file(DOKU_PLUGIN . 'pagequery/toolbar', FILE_IGNORE_NEW_LINES);
+        $list = file(DOKU_PLUGIN . 'pagequery/res/toolbar', FILE_IGNORE_NEW_LINES);
         $text = '<div id="pq-dialog" title="PageQuery Cheatsheet" style="font-size:75%;">' . PHP_EOL;
         foreach($list as $line) {
             $tab = '';
