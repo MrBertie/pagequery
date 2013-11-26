@@ -7,15 +7,14 @@ require_once(DOKU_INC . 'inc/fulltext.php');
 
 class PageQuery {
 
+    private $lang = array();
 
-    function __construct(syntax_plugin_pagequery $parent) {
-        $this->parent = $parent;
+    function __construct(Array $lang) {
+        $this->lang = $lang;
     }
 
 
-    private function _lang($item) {
-        return $this->parent->getLang($item);
-    }    /**
+    /**
      * Render a simple "no results" message
      *
      * @param string $query => original query
@@ -25,7 +24,7 @@ class PageQuery {
     function render_as_empty($query, $error = '') {
 
         $render = '<div class="pagequery no-border">' . DOKU_LF;
-        $render .= '<p class="no-results"><span>pagequery</span>' . sprintf($this->lang("no_results"),
+        $render .= '<p class="no-results"><span>pagequery</span>' . sprintf($this->lang["no_results"],
                 '<strong>' . $query . '</strong>') . '</p>' . DOKU_LF;
         if ( ! empty($error)) {
             $render .= '<p class="no-results">' . $error . '</p>' . DOKU_LF;
@@ -133,7 +132,7 @@ class PageQuery {
 
             // Begin new column if: 1) we are at the start, 2) last item was not a heading or 3) if there is no grouping
             if ($can_start_col && ! $prev_was_heading) {
-                $jump_tip = sprintf($this->_lang('jump_section'), $heading);
+                $jump_tip = sprintf($this->lang['jump_section'], $heading);
                 // close the previous column if necessary; also adds a 'jump to anchor'
                 $col_close = ( ! $is_heading) ? '<a title="'. $jump_tip . '" href="#' .
                     $top_id . '">' . "<h$cont_level>§... </h$cont_level></a>" : '';
@@ -184,7 +183,7 @@ class PageQuery {
             $render .= '</td></tr></tbody></table>' . DOKU_LF;
         }
         if ($opt['hidejump'] == false) {
-            $render .= '<a class="top" href="#' . $top_id . '">' . $this->_lang('link_to_top') . '</a>' . DOKU_LF;
+            $render .= '<a class="top" href="#' . $top_id . '">' . $this->lang['link_to_top'] . '</a>' . DOKU_LF;
         }
         $render .= '</div>' . DOKU_LF;
 
@@ -236,7 +235,7 @@ class PageQuery {
             $label = '<h1 class="title">' . $opt['label'] . '</h1>' . DOKU_LF;
         }
         if ($opt['hidejump'] === false) {
-            $show_jump = '<a class="top" href="#' . $top_id . '">' . $this->_lang('link_to_top') . '</a>' . DOKU_LF;
+            $show_jump = '<a class="top" href="#' . $top_id . '">' . $this->lang['link_to_top'] . '</a>' . DOKU_LF;
         }
         if ($opt['bullet'] != 'none') {
             $list_style = 'list-style-position:inside;list-style-type:' . $opt['bullet'];

@@ -239,8 +239,12 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         $group_opts = array();
         $message = '';
 
-        // we pass $this just to get access to the ->getLang() function...
-        $pq = new PageQuery($this);
+        $lang = array(
+            'jump_section' => $this->getLang('jump_section'),
+            'link_to_top' => $this->getLang('link_to_top'),
+            'no_results' => $this->getLang('no_results')
+        );
+        $pq = new PageQuery($lang);
         $query = $opt['query'];
 
         if ($mode == 'xhtml') {
