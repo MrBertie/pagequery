@@ -252,9 +252,14 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
             // first get a raw list of matching results
             if ($opt['fulltext']) {
                 // full text (Dokuwiki style) searching
-                $results = $pq->page_search($opt['query']);
+                $results = $pq->page_search($query);
 
             } else {
+                // Allow for a lazy man's option!
+                if ($query == '*') {
+                    $query = '.*';
+                }
+
                 // search by page id only
                 if ($opt['fullregex']) {
                     // allow for raw regex mode, for power users, this searches the full page id (incl. namespaces)
@@ -264,22 +269,15 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                     $pageonly = true;
                 }
 
-                // Allow for a lazy man's option!
-                if ($query == '*') {
-                    $query = '.*';
-                }
-
                 $results = $pq->page_lookup($query, $pageonly, $incl_ns, $excl_ns, $opt['hidestart'], $opt['maxns']);
             }
 
-            $empty = false;
+            $no_result = false;
             if ($results === false) {
-                $empty = true;
+                $no_result = true;
                 $message = $this->getLang('regex_error');
 
             } elseif ( ! empty($results)) {
-
-                // *** this section is where the essential pagequery functionality happens... ***
 
                 // prepare the necessary sorting arrays, as per users options
                 list($sort_array, $sort_opts, $group_opts) = $pq->build_sorting_array($results, $opt);
@@ -287,16 +285,15 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 // meta data filtering of the list is next
                 $sort_array = $pq->filter_meta($sort_array, $opt['filter']);
                 if (empty($sort_array)) {
-                    $empty = true;
+                    $no_result = true;
                     $message = $this->getLang("empty_filter");
                 }
-
             } else {
-                $empty = true;
+                $no_result = true;
             }
 
             // successful search...
-            if ( ! $empty) {
+            if ( ! $no_result) {
 
                 // now do the sorting
                 $pq->msort($sort_array, $sort_opts);
