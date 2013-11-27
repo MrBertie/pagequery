@@ -58,7 +58,6 @@ class PageQuery {
      * @param array  $sorted_results
      * @param array  $opt
      * @param int    $count => count of results
-     *
      * @return string => HTML rendered list
      */
     protected function _render_as_html_table($sorted_results, $opt, $count) {
