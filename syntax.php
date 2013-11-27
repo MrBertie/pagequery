@@ -60,35 +60,35 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         $opt = array();
         $match = substr($match, 12, -2); // strip markup "{{pagequery>...}}"
         $params = explode(';', $match);
-        // remove any trailing spaces due to multi-line syntax
+        // remove any pre/trailing spaces due to multi-line syntax
         $params = array_map('trim', $params);
 
         $opt['query'] = $params[0];
 
         // establish some basic option defaults
-        $opt['border'] = 'none';        // show borders around entire list and/or between columns
-        $opt['bullet'] = 'none';        // bullet style for list items
-        $opt['casesort'] = false;       // allow case sorting
-        $opt['cols'] = 1;               // number of displayed columns (fixed for table layout, max for column layout
-        $opt['dformat'] = "%d %b %Y";   // general display date format
-        $opt['display'] = 'name';       // how page links should be displayed
-        $opt['filter'] = array();       // filtering by metadata prior to sorting
-        $opt['fontsize'] = '';          // base fontsize of pagequery; best to use %
+        $opt['border']    = 'none';     // show borders around entire list and/or between columns
+        $opt['bullet']    = 'none';     // bullet style for list items
+        $opt['casesort']  = false;      // allow case sorting
+        $opt['cols']      = 1;          // number of displayed columns (fixed for table layout, max for column layout
+        $opt['dformat']   = "%d %b %Y"; // general display date format
+        $opt['display']   = 'name';     // how page links should be displayed
+        $opt['filter']    = array();    // filtering by metadata prior to sorting
+        $opt['fontsize']  = '';         // base fontsize of pagequery; best to use %
         $opt['fullregex'] = false;      // power-user regex search option--file name only
-        $opt['fulltext'] = false;       // search full-text; including file contents
-        $opt['group'] = false;          // group the results based on sort headings
-        $opt['hidejump'] = false;       // hide the jump to top link
-        $opt['hidemsg'] = false;        // hide any error messages
+        $opt['fulltext']  = false;      // search full-text; including file contents
+        $opt['group']     = false;      // group the results based on sort headings
+        $opt['hidejump']  = false;      // hide the jump to top link
+        $opt['hidemsg']   = false;      // hide any error messages
         $opt['hidestart'] = false;      // hide start pages
-        $opt['label'] = '';             // label to put at top of the list
-        $opt['layout'] = 'table';       // html layout type: table (1 col = div only) or columns (html 5 only)
-        $opt['limit'] = 0;              // limit results to certain number
-        $opt['maxns'] = 0;              // max number of namespaces to display (i.e. ns depth)
-        $opt['natsort'] = false;        // allow natural case sorting
-        $opt['proper'] = 'none';        // display file names in Proper Case
+        $opt['label']     = '';         // label to put at top of the list
+        $opt['layout']    = 'table';    // html layout type: table (1 col = div only) or columns (html 5 only)
+        $opt['limit']     = 0;          // limit results to certain number
+        $opt['maxns']     = 0;          // max number of namespaces to display (i.e. ns depth)
+        $opt['natsort']   = false;      // allow natural case sorting
+        $opt['proper']    = 'none';     // display file names in Proper Case
         $opt['showcount'] = false;      // show the count of links found
-        $opt['snippet'] = array('type' => 'none', 'count' => 0, 'extent' => '');  // show content snippets/abstracts
-        $opt['sort'] = array();         // sort by various headings
+        $opt['snippet']   = array('type' => 'none', 'count' => 0, 'extent' => ''); // show content snippets/abstracts
+        $opt['sort']      = array();    // sort by various headings
         $opt['spelldate'] = false;      // spell out date headings in words where possible
         $opt['underline'] = false;      // faint underline below each link for clarity
 
@@ -104,11 +104,9 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 case 'hidestart':
                 case 'natsort':
                 case 'showcount':
+                case 'spelldate':
                 case 'underline':
                     $opt[$option] = true;
-                    break;
-                case 'spelldate':
-                    $opt['spelldate'] = true;
                     break;
                 case 'limit':
                 case 'maxns':
@@ -159,10 +157,10 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                     break;
                 case 'border':
                     switch ($value) {
-                        case 'none':
+                        case 'both':
                         case 'inside':
                         case 'outside':
-                        case 'both':
+                        case 'none':
                             $opt['border'] = $value;
                             break;
                         default:
@@ -210,7 +208,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                     }
                     break;
                 case 'layout':
-                    if ($value != 'table' && $value != 'column') {
+                    if ( ! in_array($value, array('table', 'column'))) {
                         $value = 'table';
                     }
                     $opt['layout'] = $value;
@@ -241,8 +239,8 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
 
         $lang = array(
             'jump_section' => $this->getLang('jump_section'),
-            'link_to_top' => $this->getLang('link_to_top'),
-            'no_results' => $this->getLang('no_results')
+            'link_to_top'  => $this->getLang('link_to_top'),
+            'no_results'   => $this->getLang('no_results')
         );
         $pq = new PageQuery($lang);
         $query = $opt['query'];
@@ -255,11 +253,6 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 $results = $pq->page_search($query);
 
             } else {
-                // Allow for a lazy man's option!
-                if ($query == '*') {
-                    $query = '.*';
-                }
-
                 // search by page id only
                 if ($opt['fullregex']) {
                     // allow for raw regex mode, for power users, this searches the full page id (incl. namespaces)
@@ -267,6 +260,11 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 } else {
                     list($query, $incl_ns, $excl_ns) = $pq->parse_ns_query($query);
                     $pageonly = true;
+                }
+
+                // Allow for a lazy man's option!
+                if ($query == '*') {
+                    $query = '.*';
                 }
 
                 $results = $pq->page_lookup($query, $pageonly, $incl_ns, $excl_ns, $opt['hidestart'], $opt['maxns']);
@@ -308,11 +306,8 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
 
                 // and finally the grouping
                 $keys = array('name', 'id', 'title', 'abstract', 'display');
-                if ($opt['group']) {
-                    $sorted_results = $pq->mgroup($sort_array, $keys, $group_opts);
-                } else {
-                    $sorted_results = $pq->mgroup($sort_array, $keys);
-                }
+                if ( ! $opt['group']) $group_opts = array();
+                $sorted_results = $pq->mgroup($sort_array, $keys, $group_opts);
 
                 // and out to the page
                 $renderer->doc .= $pq->render_as_html($opt['layout'], $sorted_results, $opt, $count);
