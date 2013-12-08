@@ -820,17 +820,18 @@ class PageQuery {
      * A heavily customised version of _ft_pageLookup in inc/fulltext.php
      * no sorting!
      */
-    function page_lookup($query, $pageonly, $incl_ns, $excl_ns) {
+    function page_lookup($query, $fullregex, $incl_ns, $excl_ns) {
         global $conf;
 
         $query = trim($query);
         $pages = file($conf['indexdir'] . '/page.idx');
 
-        // first deal with excluded namespaces, then included
-        $pages = $this->_filter_ns($pages, $excl_ns, true);
+        if ( ! $fullregex) {
+            // first deal with excluded namespaces, then included, order matters!
+            $pages = $this->_filter_ns($pages, $excl_ns, true);
+            $pages = $this->_filter_ns($pages, $incl_ns, false);
+        }
 
-        // now include ONLY the selected namespaces if provided
-        $pages = $this->_filter_ns($pages, $incl_ns, false);
         $cnt = count($pages);
         for ($i = 0; $i < $cnt; $i++) {
             $page = $pages[$i];
@@ -838,11 +839,12 @@ class PageQuery {
                 unset($pages[$i]);
                 continue;
             }
-            if ($pageonly) $page = noNS($page);
+            if ( ! $fullregex) $page = noNS($page);
             /*
-             * This is the actual "search" expression!
-             * Note: preg_grep cannot be used because of the pageonly option above
-             *       (needs to allow for "^" syntax)
+             * This is the actual "search" expression.
+             * Note: preg_grep cannot be used because we need to
+             *  allow for beginning of string "^" regex on normal page search
+             *  and the page-exists check above
              * The @ prevents problems with invalid queries!
              */
             $matched = @preg_match('/' . $query . '/i', $page);
@@ -855,6 +857,7 @@ class PageQuery {
         if (count($pages) > 0) {
             return $pages;
         } else {
+            // we always return an array type
             return array();
         }
     }
@@ -865,7 +868,7 @@ class PageQuery {
 
         $pages = array_map('trim',$pages);
 
-        // check ACL permissions and remove any 'start' pages if req'd
+        // check ACL permissions, too many ns levels, and remove any 'start' pages as needed
         $start = $conf['start'];
         $offset = strlen($start);
         foreach($pages as $idx => $name) {

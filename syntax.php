@@ -248,18 +248,18 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         if ($mode == 'xhtml') {
 
             // first get a raw list of matching results
+
             if ($opt['fulltext']) {
-                // full text (Dokuwiki style) searching
+                // full text searching (Dokuwiki style)
                 $results = $pq->page_search($query);
 
             } else {
-                // search by page id only
-                if ($opt['fullregex']) {
-                    // allow for raw regex mode, for power users, this searches the full page id (incl. namespaces)
-                    $pageonly = false;
-                } else {
+                // page id searching (i.e. namespace and name, faster)
+
+                // fullregex option considers entire query to be a regex
+                // over the whole page id, incl. namespace
+                if ( ! $opt['fullregex']) {
                     list($query, $incl_ns, $excl_ns) = $pq->parse_ns_query($query);
-                    $pageonly = true;
                 }
 
                 // Allow for a lazy man's option!
@@ -267,7 +267,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                     $query = '.*';
                 }
                 // search by page name or path only
-                $results = $pq->page_lookup($query, $pageonly, $incl_ns, $excl_ns);
+                $results = $pq->page_lookup($query, $opt['fullregex'], $incl_ns, $excl_ns);
             }
             $results = $pq->validate_pages($results, $opt['hidestart'], $opt['maxns']);
 
