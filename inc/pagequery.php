@@ -803,6 +803,7 @@ class PageQuery {
         return $wformat;
     }
 
+
     /**
      * Just a wrapper around the Dokuwiki pageSearch function.
      *
@@ -814,11 +815,12 @@ class PageQuery {
         return $result;
     }
 
+
     /**
      * A heavily customised version of _ft_pageLookup in inc/fulltext.php
      * no sorting!
      */
-    function page_lookup($query, $pageonly, $incl_ns, $excl_ns, $nostart = true, $maxns = 0) {
+    function page_lookup($query, $pageonly, $incl_ns, $excl_ns) {
         global $conf;
 
         $query = trim($query);
@@ -829,7 +831,6 @@ class PageQuery {
 
         // now include ONLY the selected namespaces if provided
         $pages = $this->_filter_ns($pages, $incl_ns, false);
-
         $cnt = count($pages);
         for ($i = 0; $i < $cnt; $i++) {
             $page = $pages[$i];
@@ -851,15 +852,24 @@ class PageQuery {
                 unset($pages[$i]);
             }
         }
-        if ( ! count($pages)) return array();
+        if (count($pages) > 0) {
+            return $pages;
+        } else {
+            return array();
+        }
+    }
+
+
+    function validate_pages($pages, $nostart = true, $maxns = 0) {
+        global $conf;
 
         $pages = array_map('trim',$pages);
 
         // check ACL permissions and remove any 'start' pages if req'd
         $start = $conf['start'];
-        $pos = strlen($start);
+        $offset = strlen($start);
         foreach($pages as $idx => $name) {
-            if ($nostart && substr($name, -$pos) == $start) {
+            if ($nostart && substr($name, -$offset) == $start) {
                 unset($pages[$idx]);
             } elseif ($maxns > 0 && (substr_count($name,':')) > $maxns) {
                 unset($pages[$idx]);

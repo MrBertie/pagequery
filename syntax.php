@@ -266,9 +266,10 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 if ($query == '*') {
                     $query = '.*';
                 }
-
-                $results = $pq->page_lookup($query, $pageonly, $incl_ns, $excl_ns, $opt['hidestart'], $opt['maxns']);
+                // search by page name or path only
+                $results = $pq->page_lookup($query, $pageonly, $incl_ns, $excl_ns);
             }
+            $results = $pq->validate_pages($results, $opt['hidestart'], $opt['maxns']);
 
             $no_result = false;
             if ($results === false) {
