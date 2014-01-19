@@ -353,7 +353,7 @@ class PageQuery {
         if ($raw) {
             $wikilink = $link . $inline;
         } else {
-            $wikilink = '<li class="' . $border . '">' . $link . $inline . '</li>' . DOKU_LF . $after;
+            $wikilink = '<li class="' . $border . '">' . $link . $inline . DOKU_LF . $after . '</li>';
         }
         return $wikilink;
     }
@@ -499,6 +499,9 @@ class PageQuery {
             // getting metadata is very time-consuming, hence ONCE per displayed row
             $meta = p_get_metadata($id, '', METADATA_DONT_RENDER);
 
+            if ( ! isset($meta['date']['created'])) {
+                $meta['date']['created'] = 0;
+            }
             if ( ! isset($meta['date']['modified'])) {
                 $meta['date']['modified'] = $meta['date']['created'];
             }
@@ -630,7 +633,7 @@ class PageQuery {
                     }
                     if ( ! is_null($value)) {
                         if (strpos($key, 'date') !== false) {
-                            $value = strftime($opt['dformat'], $value);
+                            $value = utf8_encode(strftime($opt['dformat'], $value));
                         }
                         $display = str_replace($match[0], $value, $display);
                     }
