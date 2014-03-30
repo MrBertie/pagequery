@@ -91,6 +91,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         $opt['sort']      = array();    // sort by various headings
         $opt['spelldate'] = false;      // spell out date headings in words where possible
         $opt['underline'] = false;      // faint underline below each link for clarity
+        $opt['nstitle']   = false;      // internal use currently...
 
         foreach ($params as $param) {
             list($option, $value) = explode('=', $param);
@@ -198,6 +199,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                         case 'heading':
                         case 'firstheading':
                             $opt['display'] = 'title';
+                            $opt['nstitle'] = true;
                             break;
                         case 'pageid':
                         case 'id':
@@ -205,6 +207,9 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                             break;
                         default:
                             $opt['display'] = $value;
+                    }
+                    if (preg_match('/\{(title|heading|firstheading)\}/', $value)) {
+                        $opt['nstitle'] = true;
                     }
                     break;
                 case 'layout':
@@ -221,7 +226,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
             }
         }
         return $opt;
-	}
+    }
 
 
     function render($mode, &$renderer, $opt) {
@@ -243,6 +248,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
             'no_results'   => $this->getLang('no_results')
         );
         $pq = new PageQuery($lang);
+
         $query = $opt['query'];
 
         if ($mode == 'xhtml') {

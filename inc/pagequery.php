@@ -1,13 +1,12 @@
 <?php
 
-
 require_once(DOKU_INC . 'inc/fulltext.php');
-
 
 
 class PageQuery {
 
     private $lang = array();
+    private $snippet_cnt = 0;
 
     function __construct(Array $lang) {
         $this->lang = $lang;
@@ -35,11 +34,19 @@ class PageQuery {
 
 
     function render_as_html($layout, $sorted_results, $opt, $count) {
+        $this->snippet_cnt = $opt['snippet']['count'];
         $render_type = '_render_as_html_' . $layout;
         return $this->$render_type($sorted_results, $opt, $count);
     }
 
-
+    /**
+     * Used by the render_as_html_table function below
+     * **DEPRECATED**
+     *
+     * @param $sorted_results
+     * @param $ratios
+     * @return int
+     */
     private function _adjusted_height($sorted_results, $ratios) {
         // ratio of different heading heights (%), to ensure more even use of columns (h1 -> h6)
         $adjusted_height = 0;
@@ -53,7 +60,8 @@ class PageQuery {
     /**
      * Render the final pagequery results list as HTML, indented and in columns as required.
      *
-     * DEPRECATED --- I would like to scrap this ASAP (old browsers only).
+     * **DEPRECATED** --- I would like to scrap this ASAP (old browsers only).
+     * It's complicated and it's hard to maintain.
      *
      * @param array  $sorted_results
      * @param array  $opt
@@ -152,6 +160,9 @@ class PageQuery {
                 if ( ! $prev_was_heading) {
                     $render .= '</ul>' . DOKU_LF;
                 }
+                if ($opt['nstitle'] && ! empty($display)) {
+                    $heading = $display;
+                }
                 if ($opt['proper'] == 'header' || $opt['proper'] == 'both') {
                     $heading = $this->_proper($heading);
                 }
@@ -201,46 +212,28 @@ class PageQuery {
      */
     protected function _render_as_html_column($sorted_results, $opt, $count) {
 
-        $render = '';
         $prev_was_heading = false;
         $cont_level = 1;
         $is_first = true;
-
-        $fontsize = '';
-        $outer_border = '';
-        $inner_border = '';
-        $show_count = '';
-        $label = '';
-        $show_jump = '';
-        $list_style = '';
-
-        // A fixed anchor to jump back to at top
-        $top_id = 'top-' . mt_rand();
+        $top_id = 'top-' . mt_rand();   // A fixed anchor at top to jump back to
 
         // CSS for the various display options
-        if ( ! empty($opt['fontsize'])) {
-            $fontsize = 'font-size:' . $opt['fontsize'];
-        }
-        if ($opt['border'] == 'outside' || $opt['border'] == 'both') {
-            $outer_border = 'border';
-        }
-        if ($opt['border'] == 'inside'|| $opt['border'] == 'both') {
-            $inner_border =  'inner-border" ';
-        }
-        if ($opt['showcount'] == true) {
-            $show_count = '<div class="count">' . $count . ' ∞</div>' . DOKU_LF;
-        }
-        if ($opt['label'] != '') {
-            $label = '<h1 class="title">' . $opt['label'] . '</h1>' . DOKU_LF;
-        }
-        if ($opt['hidejump'] === false) {
-            $show_jump = '<a class="top" href="#' . $top_id . '">' . $this->lang['link_to_top'] . '</a>' . DOKU_LF;
-        }
-        if ($opt['bullet'] != 'none') {
-            $list_style = 'list-style-position:inside;list-style-type:' . $opt['bullet'];
-        }
+        $fontsize = ( ! empty($opt['fontsize'])) ?
+            'font-size:' . $opt['fontsize'] : '';
+        $outer_border = ($opt['border'] == 'outside' || $opt['border'] == 'both') ?
+            'border' : '';
+        $inner_border =  ($opt['border'] == 'inside'|| $opt['border'] == 'both') ?
+            'inner-border' : '';
+        $show_count = ($opt['showcount'] == true) ?
+            '<div class="count">' . $count . ' ∞</div>' . DOKU_LF : '';
+        $label = ($opt['label'] != '') ?
+            '<h1 class="title">' . $opt['label'] . '</h1>' . DOKU_LF : '';
+        $show_jump = ($opt['hidejump'] === false) ?
+            '<a class="top" href="#' . $top_id . '">' . $this->lang['link_to_top'] . '</a>' . DOKU_LF : '';
+        $list_style = ($opt['bullet'] != 'none') ?
+            'list-style-position:inside;list-style-type:' . $opt['bullet'] : '';
 
-        // no grouping = no indenting
+        // no grouping => no indenting
         $can_indent = $opt['group'];
 
         // now prepare the actual pagequery list
@@ -259,12 +252,15 @@ class PageQuery {
                 $indent_style = '';
             }
 
-            // finally display the appropriate heading or page link(s)
+            // finally display the appropriate heading...
             if ($is_heading) {
 
-                // close previous sub list if necessary
+                // close previous subheading list if necessary
                 if ( ! $prev_was_heading) {
                     $pagequery .= '</ul>' . DOKU_LF;
+                }
+                if ($opt['nstitle'] && ! empty($display)) {
+                    $heading = $display;
                 }
                 if ($opt['proper'] == 'header' || $opt['proper'] == 'both') {
                     $heading = $this->_proper($heading);
@@ -276,6 +272,7 @@ class PageQuery {
                 $prev_was_heading = true;
                 $cont_level = $level + 1;
 
+            // ...or page link(s)
             } else {
                 // open a new sub list if necessary
                 if ($prev_was_heading || $is_first) {
@@ -292,6 +289,8 @@ class PageQuery {
             $is_first = false;
         }
 
+        // and put it all together for display
+        $render = '';
         $render .= '<div class="pagequery ' . $outer_border . '" id="' . $top_id . '" style="' . $fontsize . '">' . DOKU_LF;
         $render .= $show_count . $show_jump . $label . DOKU_LF;
         $render .= '<div class="inner ' . $inner_border . '">' . DOKU_LF;
@@ -313,11 +312,7 @@ class PageQuery {
      * @return string
      */
     private function _html_wikilink($id, $display,  $abstract, $opt, $track_snippets = true, $raw = false) {
-        static $snippet_cnt = 0;
 
-        if ($track_snippets) {
-            $snippet_cnt++;
-        }
         $id = (strpos($id, ':') === false) ? ':' . $id : $id;   // : needed for root pages (root level)
 
         $link = html_wikilink($id, $display);
@@ -325,15 +320,12 @@ class PageQuery {
         $inline = '';
         $after = '';
 
-        $count = $opt['snippet']['count'];
-        $skip_snippet = ($count > 0 && $snippet_cnt >= $count);
-
         if ($type == 'tooltip') {
             $tooltip = str_replace("\n\n", "\n", $abstract);
             $tooltip = htmlentities($tooltip, ENT_QUOTES, 'UTF-8');
             $link = $this->_add_tooltip($link, $tooltip);
 
-        } elseif (in_array($type, array('quoted', 'plain', 'inline')) && ! $skip_snippet) {
+        } elseif (in_array($type, array('quoted', 'plain', 'inline')) && $this->snippet_cnt > 0) {
             $short = $this->_shorten($abstract, $opt['snippet']['extent']);
             $short = htmlentities($short, ENT_QUOTES, 'UTF-8');
             if ( ! empty($short)) {
@@ -354,6 +346,9 @@ class PageQuery {
             $wikilink = $link . $inline;
         } else {
             $wikilink = '<li class="' . $border . '">' . $link . $inline . DOKU_LF . $after . '</li>';
+        }
+        if ($track_snippets) {
+            $this->snippet_cnt--;
         }
         return $wikilink;
     }
@@ -378,12 +373,12 @@ class PageQuery {
      *
      * @param string $text
      * @param string $extent  c? = ? chars, w? = ? words, l? = ? lines, ~? = search up to text/char/symbol
-     * @param string $more
+     * @param string $more  symbol to show if more text
      * @return  string
      */
     private function _shorten($text, $extent, $more = '... ') {
         $elem = $extent[0];
-        $cnt = substr($extent, 1);
+        $cnt = (int) substr($extent, 1);
         switch ($elem) {
             case 'c':
                 $result = substr($text, 0, $cnt);
@@ -418,9 +413,28 @@ class PageQuery {
     private function _proper($id) {
         $id = str_replace(':', ': ', $id); // make a little whitespace before words so ucwords can work!
         $id = str_replace('_', ' ', $id);
-        $id = ucwords($id);
+        $id = utf8_ucwords($id);
         $id = str_replace(': ', ':', $id);
         return $id;
+    }
+
+
+    /**
+     * a mb version of 'ucwords' that respects capitalised words
+     * does not work for hyphenated words (yet)
+     * **UNUSED**
+     */
+    private function _mb_ucwords($str) {
+        $result = [];
+        $words = mb_split('\s', $str);
+        foreach ($words as $word) {
+            if (mb_strtoupper($word) == $word) {
+                $result[] = $word;
+            } else {
+                $result[] = mb_convert_case($word, MB_CASE_TITLE, "UTF-8");
+            }
+        }
+        return implode(' ', $result);
     }
 
 
@@ -644,7 +658,7 @@ class PageQuery {
             } elseif (isset($row[$display])) {
                 $display = $row[$display];
 
-                // if all else fails then used the page name (always available)
+                // if all else fails then use the page name (always available)
             } else {
                 $display = $row['name'];
             }
@@ -1158,9 +1172,10 @@ class PageQuery {
             if ($group_type === self::MGROUP_HEADING) {
                 $date_format = $group_opts['dformat'][$level];
                 if ( ! empty($date_format)) {
-                    // the real date is always the the '__realdate__' column (MGROUP_REALDATE)
+                    // the real date is always the '__realdate__' column (MGROUP_REALDATE)
                     $cur = strftime($date_format, $sort_array[$idx][self::MGROUP_REALDATE]);
                 }
+                // args : $level, $name, $id, $_, $abstract, $display
                 $results[] = array($level + 1, $cur, '');
 
             } elseif ($group_type === self::MGROUP_NAMESPACE) {
@@ -1171,8 +1186,15 @@ class PageQuery {
                     if ($cur_ns[$i] != $prev_ns[$i]) {
                         $hl = $level + $i + 1;
                         $id = implode(':', array_slice($cur_ns, 0, $i + 1)) . ':' . $conf['start'];
-                        $ns_start = (page_exists($id)) ? $id : '';
-                        $results[] = array($hl , $cur_ns[$i], $ns_start, '', '');
+                        if (page_exists($id)) {
+                            $ns_start = $id;
+                            // allow the first heading to be used instead of page id/name
+                            $display = p_get_metadata($id, 'title');
+                        } else {
+                            $ns_start = $display = '';
+                        }
+                        // args : $level, $name, $id, $_, $abstract, $display
+                        $results[] = array($hl , $cur_ns[$i], $ns_start, '', '', $display);
                     }
                 }
             }
