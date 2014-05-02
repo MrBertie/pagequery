@@ -425,7 +425,7 @@ class PageQuery {
      * **UNUSED**
      */
     private function _mb_ucwords($str) {
-        $result = [];
+        $result = array();
         $words = mb_split('\s', $str);
         foreach ($words as $word) {
             if (mb_strtoupper($word) == $word) {
