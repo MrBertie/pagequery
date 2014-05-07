@@ -94,7 +94,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         $opt['nstitle']   = false;      // internal use currently...
 
         foreach ($params as $param) {
-            list($option, $value) = explode('=', $param);
+            list($option, $value) = $this->_keyvalue($param, '=');
             switch ($option) {
                 case 'casesort':
 				case 'fullregex':
@@ -117,7 +117,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 case 'filter':
                     $fields = explode(',', $value);
                     foreach ($fields as $field) {
-                        list($key, $expr) = explode(':', $field, 2);
+                        list($key, $expr) = $this->_keyvalue($field);
                         // allow for a few common naming differences
                         switch ($key) {
                             case 'pagename':
@@ -329,6 +329,21 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
         } else {
             return false;
         }
+    }
+
+
+    /**
+     * Split a string into key => value parts.
+     *
+     * @param string $str
+     * @param string $delim
+     * @return array
+     */
+    private function _keyvalue($str, $delim = ':') {
+        $parts = explode($delim, $str);
+        $key = isset($parts[0]) ? $parts[0] : '';
+        $value = isset($parts[1]) ? $parts[1] : '';
+        return array($key, $value);
     }
 }
 
