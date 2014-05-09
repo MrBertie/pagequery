@@ -558,7 +558,7 @@ class PageQuery {
                     case 'a':
                     case 'ab':
                     case 'abc':
-                        $value = $this->_first(strtolower($abc), strlen($key));
+                        $value = $this->_first($abc, strlen($key));
                         break;
                     case 'name':
                     case 'title':
@@ -768,9 +768,9 @@ class PageQuery {
     }
 
 
-    // returns first $count letters from $text
+    // returns first $count letters from $text in lowercase
     private function _first($text, $count) {
-        $result = ($count > 0) ? utf8_substr($text, 0, $count) : '';
+        $result = ($count > 0) ? utf8_substr(utf8_strtolower($text), 0, $count) : '';
         return $result;
     }
 
