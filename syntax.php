@@ -55,7 +55,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
      *
      * @link https://www.dokuwiki.org/plugin:pagequery See PageQuery page for full details
      */
-    function handle($match, $state, $pos, &$handler) {
+    function handle($match, $state, $pos, Doku_Handler $handler) {
 
         $opt = array();
         $match = substr($match, 12, -2); // strip markup "{{pagequery>...}}"
@@ -229,7 +229,7 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
     }
 
 
-    function render($mode, &$renderer, $opt) {
+    function render($mode, Doku_Renderer $renderer, $opt) {
 
         if ( ! PHP_MAJOR_VERSION >= 5 && ! PHP_MINOR_VERSION >= 3) {
             $renderer->doc .= "You must have PHP 5.3 or greater to use this pagequery plugin.  Please upgrade PHP or use an older version of the plugin";
