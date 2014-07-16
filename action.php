@@ -7,7 +7,7 @@ class action_plugin_pagequery extends DokuWiki_Action_Plugin {
     /**
      * Register the eventhandlers
      */
-    function register(&$controller) {
+    function register(Doku_Event_Handler $controller) {
         $controller->register_hook('TOOLBAR_DEFINE', 'AFTER', $this, 'insert_button', array ());
     }
 
