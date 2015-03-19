@@ -326,6 +326,11 @@ class syntax_plugin_pagequery extends DokuWiki_Syntax_Plugin {
                 }
             }
             return true;
+        } else if ($mode == 'metadata' ) {
+            // this is a pagequery page needing PARSER_CACHE_USE event trigger;
+            $renderer->meta['pagequery'] = TRUE;
+            unset($renderer->persistent['pagequery']);
+            return true;
         } else {
             return false;
         }
