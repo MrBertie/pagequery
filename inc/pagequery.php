@@ -782,7 +782,7 @@ class PageQuery {
      * @return string
      */
     private function _date_format($key) {
-        $dkey = '';
+        $dkey = array();
         if (strpos($key, 'year') !== false) $dkey[] = '%Y';
         if (strpos($key, 'month') !== false) $dkey[] = '%m';
         if (strpos($key, 'day') !== false) $dkey[] = '%d';
